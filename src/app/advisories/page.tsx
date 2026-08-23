@@ -67,10 +67,10 @@ async function AdvisoryTable({ severity, q }: { severity: string; q: string }) {
 
   return (
     <>
-      <p className="mb-3 text-[12.5px] text-lichen">
-        <span className="u-num text-bone">{rows.length}</span> advisories ·{" "}
-        <span className="u-num text-bone">{exposed}</span> reach at least one service ·{" "}
-        <span className="u-num text-bone">{rows.length - exposed}</span> we are not exposed to
+      <p className="mb-3 text-[12.5px] text-fg-subtle">
+        <span className="u-num text-fg">{rows.length}</span> advisories ·{" "}
+        <span className="u-num text-fg">{exposed}</span> reach at least one service ·{" "}
+        <span className="u-num text-fg">{rows.length - exposed}</span> we are not exposed to
       </p>
 
       <Panel padded={false} className="overflow-hidden">
@@ -101,28 +101,28 @@ async function AdvisoryTable({ severity, q }: { severity: string; q: string }) {
                       {row.exploitKnown ? <Tag tone="warn">exploited</Tag> : null}
                       {!row.verified ? <Tag tone="quiet">synthetic</Tag> : null}
                     </div>
-                    <p className="mt-1 text-[12.5px] leading-snug text-lichen">{row.title}</p>
+                    <p className="mt-1 text-[12.5px] leading-snug text-fg-subtle">{row.title}</p>
                   </td>
-                  <td className="u-mono max-w-[200px] text-[11.5px] text-lichen">
+                  <td className="u-mono max-w-[200px] text-[11.5px] text-fg-subtle">
                     {row.affectedPackages.slice(0, 2).join(", ")}
                     {row.affectedPackages.length > 2 ? ` +${row.affectedPackages.length - 2}` : ""}
                   </td>
                   <td className="num">
                     {row.affectedServices > 0 ? (
-                      <span className="u-num text-bone">{row.affectedServices}</span>
+                      <span className="u-num text-fg">{row.affectedServices}</span>
                     ) : (
-                      <span className="u-num text-lichen-dim">0</span>
+                      <span className="u-num text-fg-faint">0</span>
                     )}
                   </td>
                   <td className="num">
                     {row.criticalServices > 0 ? (
                       <span className="u-num text-critical">{row.criticalServices}</span>
                     ) : (
-                      <span className="u-num text-lichen-dim">—</span>
+                      <span className="u-num text-fg-faint">—</span>
                     )}
                   </td>
-                  <td className="num text-bone">{row.cvss.toFixed(1)}</td>
-                  <td className="num text-[12px] text-lichen">{relativeDay(row.publishedAt)}</td>
+                  <td className="num text-fg">{row.cvss.toFixed(1)}</td>
+                  <td className="num text-[12px] text-fg-subtle">{relativeDay(row.publishedAt)}</td>
                 </tr>
               ))}
             </tbody>

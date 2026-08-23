@@ -94,21 +94,21 @@ async function ServiceTable({ tier, q }: { tier: string; q: string }) {
                     </Link>
                     {row.shipsExternally ? <Tag tone="warn">external</Tag> : null}
                   </div>
-                  <p className="mt-1 text-[12px] leading-snug text-lichen">{row.description}</p>
+                  <p className="mt-1 text-[12px] leading-snug text-fg-subtle">{row.description}</p>
                   <div className="mt-1.5">
                     <TierMark tier={row.tier} />
                   </div>
                 </td>
-                <td className="text-[12.5px] text-lichen">{row.teamName ?? "—"}</td>
+                <td className="text-[12.5px] text-fg-subtle">{row.teamName ?? "—"}</td>
                 <td>
                   <Tag tone="quiet">{row.language}</Tag>
                 </td>
-                <td className="num text-bone-dim">{row.directDependencies}</td>
+                <td className="num text-fg-muted">{row.directDependencies}</td>
                 <td className="num">
                   <Meter
                     value={row.advisories}
                     max={maxAdvisories}
-                    tone={row.criticalAdvisories > 0 ? "var(--sev-critical)" : "var(--chalk)"}
+                    tone={row.criticalAdvisories > 0 ? "var(--sev-critical)" : "var(--accent)"}
                   />
                   {row.criticalAdvisories > 0 ? (
                     <div className="u-num mt-1 text-[10.5px] text-critical">
@@ -150,14 +150,14 @@ async function Teams() {
             <tbody>
               {result.data.map((row) => (
                 <tr key={row.slug}>
-                  <td className="font-medium text-bone">{row.name}</td>
-                  <td className="max-w-[380px] text-[12.5px] text-lichen">{row.mission}</td>
-                  <td className="num text-bone-dim">{row.services}</td>
+                  <td className="font-medium text-fg">{row.name}</td>
+                  <td className="max-w-[380px] text-[12.5px] text-fg-subtle">{row.mission}</td>
+                  <td className="num text-fg-muted">{row.services}</td>
                   <td className="num">
                     <Meter
                       value={row.advisoryHits}
                       max={max}
-                      tone={row.criticalHits > 0 ? "var(--sev-critical)" : "var(--chalk)"}
+                      tone={row.criticalHits > 0 ? "var(--sev-critical)" : "var(--accent)"}
                     />
                   </td>
                 </tr>

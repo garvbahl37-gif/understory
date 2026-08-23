@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { DepthHistogram } from "@/components/ui/charts";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { MissingEntity } from "@/components/ui/MissingEntity";
 import { Strata, chainToStrata } from "@/components/ui/Strata";
 import {
   EmptyState,
@@ -106,7 +106,7 @@ async function BlastRadius({ advisoryId }: { advisoryId: string }) {
           <p className="u-eyebrow mb-3">Remediation</p>
           {upgrade?.fixedVersion ? (
             <>
-              <p className="text-[13px] leading-relaxed text-bone-dim">
+              <p className="text-[13px] leading-relaxed text-fg-muted">
                 The nearest clean release is{" "}
                 <Link
                   href={packageHref(parseVersionKey(upgrade.fixedVersion).packageKey)}
@@ -114,32 +114,32 @@ async function BlastRadius({ advisoryId }: { advisoryId: string }) {
                 >
                   {parseVersionKey(upgrade.fixedVersion).packageName}@{upgrade.fixedSemver}
                 </Link>
-                , <strong className="text-bone">{upgrade.releasesAhead}</strong>{" "}
+                , <strong className="text-fg">{upgrade.releasesAhead}</strong>{" "}
                 {upgrade.releasesAhead === 1 ? "release" : "releases"} ahead of the version in the deepest
                 path.
               </p>
               <div className="panel-sunken mt-3 px-3 py-2.5">
-                <p className="u-mono text-[11.5px] leading-relaxed text-lichen">
+                <p className="u-mono text-[11.5px] leading-relaxed text-fg-subtle">
                   {upgrade.releaseChain
                     .slice()
                     .reverse()
                     .map((version, index, all) => (
                       <span key={version}>
-                        <span className={index === all.length - 1 ? "text-low" : "text-bone-dim"}>
+                        <span className={index === all.length - 1 ? "text-low" : "text-fg-muted"}>
                           {version}
                         </span>
-                        {index < all.length - 1 ? <span className="text-lichen-faint"> → </span> : null}
+                        {index < all.length - 1 ? <span className="text-fg-ghost"> → </span> : null}
                       </span>
                     ))}
                 </p>
               </div>
-              <p className="mt-3 text-[11.5px] text-lichen">
+              <p className="mt-3 text-[11.5px] text-fg-subtle">
                 Found by walking the SUPERSEDES chain from the affected release forward until a version this
                 advisory does not touch — not by parsing the fix note.
               </p>
             </>
           ) : (
-            <p className="text-[13px] text-lichen">
+            <p className="text-[13px] text-fg-subtle">
               No unaffected release of the affected package exists in the graph yet. Pin, patch or vendor.
             </p>
           )}
@@ -161,15 +161,15 @@ async function BlastRadius({ advisoryId }: { advisoryId: string }) {
                   <TierMark tier={row.tier} />
                   {row.shipsExternally ? <Tag tone="warn">customer-facing</Tag> : null}
                 </div>
-                <div className="flex items-center gap-3 text-[11.5px] text-lichen">
+                <div className="flex items-center gap-3 text-[11.5px] text-fg-subtle">
                   <span>{row.teamName ?? "unowned"}</span>
-                  <span className="u-mono text-lichen-faint">·</span>
+                  <span className="u-mono text-fg-ghost">·</span>
                   <span className="u-num">
                     {row.hops} {row.hops === 1 ? "hop" : "hops"}
                   </span>
                   {row.distinctRoutes > 1 ? (
                     <>
-                      <span className="u-mono text-lichen-faint">·</span>
+                      <span className="u-mono text-fg-ghost">·</span>
                       <span className="u-num">{row.distinctRoutes} routes</span>
                     </>
                   ) : null}
@@ -194,8 +194,8 @@ async function BlastRadius({ advisoryId }: { advisoryId: string }) {
                   key={team}
                   className="flex items-baseline justify-between gap-3 border-b border-rule/60 pb-1.5"
                 >
-                  <span className="text-[13px] text-bone-dim">{team}</span>
-                  <span className="u-num text-[13px] text-bone">{count}</span>
+                  <span className="text-[13px] text-fg-muted">{team}</span>
+                  <span className="u-num text-[13px] text-fg">{count}</span>
                 </li>
               ))}
           </ul>
@@ -223,7 +223,16 @@ export default async function AdvisoryPage({ params }: { params: Promise<{ id: s
   }
 
   const advisory = head.data;
-  if (!advisory) notFound();
+  if (!advisory) {
+    return (
+      <MissingEntity
+        kind="advisory"
+        identifier={advisoryId}
+        browseHref="/advisories"
+        browseLabel="Browse advisories"
+      />
+    );
+  }
 
   return (
     <Page>
@@ -249,8 +258,8 @@ export default async function AdvisoryPage({ params }: { params: Promise<{ id: s
 
       <div className="mb-7 grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
         <Panel>
-          <p className="u-mono mb-2 text-[13px] text-chalk">{advisory.id}</p>
-          <p className="text-[14px] leading-relaxed text-bone-dim">{advisory.summary}</p>
+          <p className="u-mono mb-2 text-[13px] text-accent">{advisory.id}</p>
+          <p className="text-[14px] leading-relaxed text-fg-muted">{advisory.summary}</p>
           <div className="mt-4 flex flex-wrap gap-2">
             {advisory.exploitKnown ? <Tag tone="warn">exploitation observed</Tag> : null}
             {advisory.verified ? (
@@ -275,16 +284,16 @@ export default async function AdvisoryPage({ params }: { params: Promise<{ id: s
         <Panel>
           <dl className="space-y-3 text-[12.5px]">
             <div className="flex items-baseline justify-between gap-3">
-              <dt className="text-lichen">CVSS</dt>
-              <dd className="u-num text-[18px] text-bone">{advisory.cvss.toFixed(1)}</dd>
+              <dt className="text-fg-subtle">CVSS</dt>
+              <dd className="u-num text-[18px] text-fg">{advisory.cvss.toFixed(1)}</dd>
             </div>
             <div className="flex items-baseline justify-between gap-3 border-t border-rule pt-3">
-              <dt className="text-lichen">Published</dt>
-              <dd className="text-bone-dim">{formatDay(advisory.publishedAt)}</dd>
+              <dt className="text-fg-subtle">Published</dt>
+              <dd className="text-fg-muted">{formatDay(advisory.publishedAt)}</dd>
             </div>
             <div className="flex items-baseline justify-between gap-3 border-t border-rule pt-3">
-              <dt className="text-lichen">Affected releases</dt>
-              <dd className="u-num text-bone-dim">
+              <dt className="text-fg-subtle">Affected releases</dt>
+              <dd className="u-num text-fg-muted">
                 {advisory.packages.reduce((sum, pkg) => sum + pkg.versions.length, 0)}
               </dd>
             </div>
@@ -309,7 +318,7 @@ export default async function AdvisoryPage({ params }: { params: Promise<{ id: s
                     className="u-mono flex items-baseline justify-between gap-3 text-[11.5px]"
                   >
                     <span className="text-critical">{version.version}</span>
-                    <span className="text-lichen-faint">affected</span>
+                    <span className="text-fg-ghost">affected</span>
                   </li>
                 ))}
               </ul>

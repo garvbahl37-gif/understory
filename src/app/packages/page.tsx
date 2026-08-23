@@ -83,15 +83,15 @@ async function PackageTable({ eco, q }: { eco: string; q: string }) {
                     </Link>
                     {row.deprecated ? <Tag tone="warn">deprecated</Tag> : null}
                   </div>
-                  <p className="mt-1 truncate text-[12px] text-lichen">{row.description}</p>
+                  <p className="mt-1 truncate text-[12px] text-fg-subtle">{row.description}</p>
                 </td>
                 <td>
                   <Tag tone="quiet">{ecosystemLabel(row.ecosystem)}</Tag>
                 </td>
-                <td className="num text-bone-dim">{compactNumber(row.weeklyDownloads)}</td>
-                <td className="num text-bone-dim">{row.versions}</td>
+                <td className="num text-fg-muted">{compactNumber(row.weeklyDownloads)}</td>
+                <td className="num text-fg-muted">{row.versions}</td>
                 <td className="num">
-                  <span className={row.maintainers === 1 ? "text-high" : "text-bone-dim"}>
+                  <span className={row.maintainers === 1 ? "text-high" : "text-fg-muted"}>
                     {row.maintainers}
                   </span>
                 </td>
@@ -99,7 +99,7 @@ async function PackageTable({ eco, q }: { eco: string; q: string }) {
                   {row.advisories > 0 ? (
                     <span className="u-num text-critical">{row.advisories}</span>
                   ) : (
-                    <span className="u-num text-lichen-faint">—</span>
+                    <span className="u-num text-fg-ghost">—</span>
                   )}
                 </td>
               </tr>

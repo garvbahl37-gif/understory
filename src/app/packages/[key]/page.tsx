@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { ErrorState } from "@/components/ui/ErrorState";
+import { MissingEntity } from "@/components/ui/MissingEntity";
 import { Strata, chainToStrata } from "@/components/ui/Strata";
 import {
   EmptyState,
@@ -124,9 +124,9 @@ async function Downstream({ packageKey }: { packageKey: string }) {
                           {row.name}
                         </Link>
                       </td>
-                      <td className="u-mono text-[12px] text-bone-dim">{row.dependentVersion}</td>
-                      <td className="u-mono text-[11.5px] text-lichen">{row.declaredRange}</td>
-                      <td className="num text-bone-dim">{compactNumber(row.weeklyDownloads)}</td>
+                      <td className="u-mono text-[12px] text-fg-muted">{row.dependentVersion}</td>
+                      <td className="u-mono text-[11.5px] text-fg-subtle">{row.declaredRange}</td>
+                      <td className="num text-fg-muted">{compactNumber(row.weeklyDownloads)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -156,7 +156,7 @@ async function Downstream({ packageKey }: { packageKey: string }) {
                     </Link>
                     <TierMark tier={row.tier} />
                   </div>
-                  <span className="u-num text-[11.5px] text-lichen">
+                  <span className="u-num text-[11.5px] text-fg-subtle">
                     {row.teamName ?? "unowned"} · {row.hops} {row.hops === 1 ? "hop" : "hops"}
                   </span>
                 </div>
@@ -195,7 +195,16 @@ export default async function PackagePage({ params }: { params: Promise<{ key: s
   }
 
   const pkg = head.data;
-  if (!pkg) notFound();
+  if (!pkg) {
+    return (
+      <MissingEntity
+        kind="package"
+        identifier={packageKey}
+        browseHref="/packages"
+        browseLabel="Browse packages"
+      />
+    );
+  }
 
   const soleMaintainer = pkg.maintainers.length === 1;
   const without2fa = pkg.maintainers.filter((m) => !m.twoFactorEnabled).length;
@@ -265,10 +274,10 @@ export default async function PackagePage({ params }: { params: Promise<{ key: s
                 <tbody>
                   {pkg.versions.map((version) => (
                     <tr key={version.key}>
-                      <td className="u-mono text-[12.5px] text-bone">{version.version}</td>
-                      <td className="text-[12px] text-lichen">{formatDay(version.publishedAt)}</td>
+                      <td className="u-mono text-[12.5px] text-fg">{version.version}</td>
+                      <td className="text-[12px] text-fg-subtle">{formatDay(version.publishedAt)}</td>
                       <td>
-                        <span className="u-mono text-[11.5px] text-bone-dim">{version.license ?? "—"}</span>
+                        <span className="u-mono text-[11.5px] text-fg-muted">{version.license ?? "—"}</span>
                         {version.licenseCategory && version.licenseCategory !== "permissive" ? (
                           <div className="mt-0.5">
                             <Tag tone="warn">{version.licenseCategory}</Tag>
@@ -277,7 +286,7 @@ export default async function PackagePage({ params }: { params: Promise<{ key: s
                       </td>
                       <td>
                         {version.advisories.length === 0 ? (
-                          <span className="text-[12px] text-lichen-faint">clean</span>
+                          <span className="text-[12px] text-fg-ghost">clean</span>
                         ) : (
                           <span className="flex flex-wrap gap-1">
                             {version.advisories.map((advisory) => (
@@ -308,16 +317,16 @@ export default async function PackagePage({ params }: { params: Promise<{ key: s
                     >
                       {maintainer.handle}
                     </Link>
-                    <Tag tone={maintainer.role === "owner" ? "chalk" : "quiet"}>{maintainer.role}</Tag>
+                    <Tag tone={maintainer.role === "owner" ? "accent" : "quiet"}>{maintainer.role}</Tag>
                   </div>
-                  <p className="mt-1 text-[12px] text-lichen">{maintainer.name}</p>
+                  <p className="mt-1 text-[12px] text-fg-subtle">{maintainer.name}</p>
                   <div className="mt-2 flex items-center gap-2">
                     {maintainer.twoFactorEnabled ? (
                       <Tag tone="quiet">2FA on</Tag>
                     ) : (
                       <Tag tone="warn">no 2FA</Tag>
                     )}
-                    <span className="u-mono text-[10.5px] text-lichen-faint">
+                    <span className="u-mono text-[10.5px] text-fg-ghost">
                       {maintainer.publicPackages} packages
                     </span>
                   </div>

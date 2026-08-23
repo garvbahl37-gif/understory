@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { DepthHistogram } from "@/components/ui/charts";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { MissingEntity } from "@/components/ui/MissingEntity";
 import { Strata, chainToStrata } from "@/components/ui/Strata";
 import {
   EmptyState,
@@ -159,12 +159,12 @@ async function Footprint({ slug, name }: { slug: string; name: string }) {
                   {licenses.map((row) => (
                     <tr key={row.spdxId}>
                       <td>
-                        <span className="u-mono text-[12px] text-bone-dim">{row.spdxId}</span>
+                        <span className="u-mono text-[12px] text-fg-muted">{row.spdxId}</span>
                         <div className="mt-0.5">
                           <Tag tone={row.category === "permissive" ? "quiet" : "warn"}>{row.category}</Tag>
                         </div>
                       </td>
-                      <td className="num text-bone-dim">{row.versions}</td>
+                      <td className="num text-fg-muted">{row.versions}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -198,12 +198,12 @@ async function Footprint({ slug, name }: { slug: string; name: string }) {
                       {row.exploitKnown ? <Tag tone="warn">exploited</Tag> : null}
                       {!row.verified ? <Tag tone="quiet">synthetic</Tag> : null}
                     </div>
-                    <span className="u-num text-[11.5px] text-lichen">
+                    <span className="u-num text-[11.5px] text-fg-subtle">
                       {row.hops} {row.hops === 1 ? "hop" : "hops"}
                     </span>
                   </div>
                   <div className="px-4 py-3">
-                    <p className="mb-2.5 text-[12.5px] leading-snug text-lichen">{row.title}</p>
+                    <p className="mb-2.5 text-[12.5px] leading-snug text-fg-subtle">{row.title}</p>
                     <Strata rows={chainToStrata(name, `/services/${slug}`, row.chain)} />
                   </div>
                 </Panel>
@@ -247,17 +247,17 @@ async function Dependencies({ slug }: { slug: string }) {
                       <Tag tone="quiet">{ecosystemLabel(row.ecosystem)}</Tag>
                     </div>
                   </td>
-                  <td className="u-mono text-[12px] text-bone-dim">
+                  <td className="u-mono text-[12px] text-fg-muted">
                     {row.version}
-                    <div className="text-[10.5px] text-lichen-faint">{row.declaredRange}</div>
+                    <div className="text-[10.5px] text-fg-ghost">{row.declaredRange}</div>
                   </td>
                   <td>
                     <Tag tone="quiet">{row.scope}</Tag>
                   </td>
-                  <td className="u-mono text-[11.5px] text-lichen">{row.license ?? "—"}</td>
+                  <td className="u-mono text-[11.5px] text-fg-subtle">{row.license ?? "—"}</td>
                   <td>
                     {row.directAdvisorySeverities.length === 0 ? (
-                      <span className="text-[12px] text-lichen-faint">clean</span>
+                      <span className="text-[12px] text-fg-ghost">clean</span>
                     ) : (
                       <span className="flex flex-wrap gap-1">
                         {row.directAdvisorySeverities.map((severity) => (
@@ -291,7 +291,11 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
   }
 
   const service = head.data;
-  if (!service) notFound();
+  if (!service) {
+    return (
+      <MissingEntity kind="service" identifier={slug} browseHref="/services" browseLabel="Browse services" />
+    );
+  }
 
   return (
     <Page>
@@ -316,16 +320,16 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
       <div className="mb-7 grid gap-4 lg:grid-cols-3">
         <Panel>
           <p className="u-eyebrow mb-3">Ownership</p>
-          <p className="text-[14px] text-bone">{service.teamName ?? "Unowned"}</p>
+          <p className="text-[14px] text-fg">{service.teamName ?? "Unowned"}</p>
           {service.teamMission ? (
-            <p className="mt-1 text-[12.5px] text-lichen">{service.teamMission}</p>
+            <p className="mt-1 text-[12.5px] text-fg-subtle">{service.teamMission}</p>
           ) : null}
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <TierMark tier={service.tier} />
             <Tag tone="quiet">{service.language}</Tag>
             {service.shipsExternally ? <Tag tone="warn">customer-facing</Tag> : null}
           </div>
-          <p className="u-mono mt-4 text-[11px] text-lichen-faint">
+          <p className="u-mono mt-4 text-[11px] text-fg-ghost">
             deployed {relativeDay(service.deployedAt)} · {formatDay(service.deployedAt)}
           </p>
         </Panel>
@@ -333,7 +337,7 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
         <Panel>
           <p className="u-eyebrow mb-3">Calls out to</p>
           {service.calls.length === 0 ? (
-            <p className="text-[12.5px] text-lichen">Nothing. This service is a leaf in the call graph.</p>
+            <p className="text-[12.5px] text-fg-subtle">Nothing. This service is a leaf in the call graph.</p>
           ) : (
             <ul className="space-y-1.5">
               {service.calls.map((call) => (
@@ -351,7 +355,7 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
         <Panel>
           <p className="u-eyebrow mb-3">Called by</p>
           {service.calledBy.length === 0 ? (
-            <p className="text-[12.5px] text-lichen">Nothing calls this directly.</p>
+            <p className="text-[12.5px] text-fg-subtle">Nothing calls this directly.</p>
           ) : (
             <ul className="space-y-1.5">
               {service.calledBy.map((call) => (
