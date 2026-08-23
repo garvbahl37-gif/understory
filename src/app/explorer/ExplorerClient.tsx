@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
-import { ForceGraph } from "@/components/graph/ForceGraph";
+import { ForceGraph, type ColorMode } from "@/components/graph/ForceGraph";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { Portal, useScrollLock } from "@/components/ui/Portal";
 import { EmptyState, Panel, Tag } from "@/components/ui/primitives";
 import type { DbErrorShape } from "@/lib/db/errors";
 import type { GraphNode, GraphPayload } from "@/lib/domain/types";
@@ -48,6 +49,10 @@ export function ExplorerClient({ initialSeed, initialId }: { initialSeed: SeedKi
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerQuery, setPickerQuery] = useState("");
   const [candidates, setCandidates] = useState<Candidate[]>([]);
+
+  useScrollLock(pickerOpen);
+
+  const [colorMode, setColorMode] = useState<ColorMode>("depth");
 
   const setParam = useCallback(
     (patch: Record<string, string>) => {
@@ -154,8 +159,8 @@ export function ExplorerClient({ initialSeed, initialId }: { initialSeed: SeedKi
         </div>
 
         <button type="button" className="btn" onClick={() => setPickerOpen(true)}>
-          <span className="u-mono text-[11.5px] text-lichen">{seed}</span>
-          <span className="u-mono text-[12px] text-bone">{id || "choose…"}</span>
+          <span className="u-mono text-[11.5px] text-fg-subtle">{seed}</span>
+          <span className="u-mono text-[12px] text-fg">{id || "choose…"}</span>
         </button>
 
         <div className="flex flex-wrap items-center gap-1.5">
@@ -173,8 +178,28 @@ export function ExplorerClient({ initialSeed, initialId }: { initialSeed: SeedKi
           ))}
         </div>
 
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="u-eyebrow mr-1">Colour by</span>
+          {(
+            [
+              { value: "depth", label: "distance" },
+              { value: "kind", label: "kind" },
+            ] as const
+          ).map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              className="chip"
+              data-active={colorMode === option.value}
+              onClick={() => setColorMode(option.value)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+
         {payload ? (
-          <span className="u-mono text-[11px] text-lichen">
+          <span className="u-mono text-[11px] text-fg-subtle">
             {payload.nodes.length} nodes · {payload.edges.length} relationships
           </span>
         ) : null}
@@ -182,54 +207,56 @@ export function ExplorerClient({ initialSeed, initialId }: { initialSeed: SeedKi
 
       {/* picker */}
       {pickerOpen ? (
-        <div
-          className="fixed inset-0 z-50 flex items-start justify-center bg-black/55 px-4 pt-[14vh] backdrop-blur-sm"
-          onClick={() => setPickerOpen(false)}
-          role="presentation"
-        >
+        <Portal>
           <div
-            className="panel panel-lifted w-full max-w-[520px] overflow-hidden p-0"
-            onClick={(event) => event.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Choose a starting point"
+            className="fixed inset-0 z-[100] flex items-start justify-center bg-black/55 px-4 pt-[14vh] backdrop-blur-sm"
+            onClick={() => setPickerOpen(false)}
+            role="presentation"
           >
-            <input
-              autoFocus
-              value={pickerQuery}
-              onChange={(event) => setPickerQuery(event.target.value)}
-              placeholder="Search services, packages, advisories, maintainers…"
-              className="w-full border-b border-rule bg-transparent px-4 py-3 text-[14px] text-bone outline-none placeholder:text-lichen-dim"
-            />
-            <div className="max-h-[48vh] overflow-y-auto">
-              {candidates.length === 0 ? (
-                <p className="px-4 py-6 text-[13px] text-lichen">Nothing matches yet.</p>
-              ) : null}
-              {candidates.map((candidate) => (
-                <button
-                  key={`${candidate.label}:${candidate.id}`}
-                  type="button"
-                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-[var(--peat-high)]"
-                  onClick={() =>
-                    focusOn({
-                      id: `${candidate.label}:${candidate.id}`,
-                      label: candidate.label as GraphNode["label"],
-                      caption: candidate.caption,
-                    })
-                  }
-                >
-                  <span className="u-mono w-[72px] shrink-0 text-[9.5px] uppercase tracking-[0.11em] text-lichen">
-                    {candidate.label}
-                  </span>
-                  <span className="u-mono flex-1 truncate text-[12.5px] text-bone">{candidate.caption}</span>
-                  {candidate.sub ? (
-                    <span className="u-mono shrink-0 text-[10.5px] text-lichen-faint">{candidate.sub}</span>
-                  ) : null}
-                </button>
-              ))}
+            <div
+              className="panel panel-lifted w-full max-w-[520px] overflow-hidden p-0"
+              onClick={(event) => event.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Choose a starting point"
+            >
+              <input
+                autoFocus
+                value={pickerQuery}
+                onChange={(event) => setPickerQuery(event.target.value)}
+                placeholder="Search services, packages, advisories, maintainers…"
+                className="w-full border-b border-rule bg-transparent px-4 py-3 text-[14px] text-fg outline-none placeholder:text-fg-faint"
+              />
+              <div className="max-h-[48vh] overflow-y-auto">
+                {candidates.length === 0 ? (
+                  <p className="px-4 py-6 text-[13px] text-fg-subtle">Nothing matches yet.</p>
+                ) : null}
+                {candidates.map((candidate) => (
+                  <button
+                    key={`${candidate.label}:${candidate.id}`}
+                    type="button"
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-[var(--surface-2)]"
+                    onClick={() =>
+                      focusOn({
+                        id: `${candidate.label}:${candidate.id}`,
+                        label: candidate.label as GraphNode["label"],
+                        caption: candidate.caption,
+                      })
+                    }
+                  >
+                    <span className="u-mono w-[72px] shrink-0 text-[9.5px] uppercase tracking-[0.11em] text-fg-subtle">
+                      {candidate.label}
+                    </span>
+                    <span className="u-mono flex-1 truncate text-[12.5px] text-fg">{candidate.caption}</span>
+                    {candidate.sub ? (
+                      <span className="u-mono shrink-0 text-[10.5px] text-fg-ghost">{candidate.sub}</span>
+                    ) : null}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        </Portal>
       ) : null}
 
       {/* canvas + inspector */}
@@ -249,13 +276,18 @@ export function ExplorerClient({ initialSeed, initialId }: { initialSeed: SeedKi
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_296px]">
           <div className="relative">
             {loading ? (
-              <div className="flex h-[560px] items-center justify-center rounded-[5px] border border-rule bg-[var(--peat-sunken)]">
-                <span className="breathe u-mono text-[11px] uppercase tracking-[0.13em] text-lichen">
+              <div className="flex h-[560px] items-center justify-center rounded-[5px] border border-rule bg-[var(--well)]">
+                <span className="breathe u-mono text-[11px] uppercase tracking-[0.13em] text-fg-subtle">
                   walking the graph
                 </span>
               </div>
             ) : payload && payload.nodes.length > 0 ? (
-              <ForceGraph payload={payload} onSelect={setSelected} selectedId={selected?.id ?? null} />
+              <ForceGraph
+                payload={payload}
+                onSelect={setSelected}
+                selectedId={selected?.id ?? null}
+                colorMode={colorMode}
+              />
             ) : (
               <EmptyState
                 title="Nothing connects to that"
@@ -274,8 +306,8 @@ export function ExplorerClient({ initialSeed, initialId }: { initialSeed: SeedKi
             {selected ? (
               <>
                 <p className="u-eyebrow mb-2">{selected.label}</p>
-                <p className="u-mono break-all text-[13.5px] text-bone">{selected.caption}</p>
-                {selected.sub ? <p className="mt-1 text-[12px] text-lichen">{selected.sub}</p> : null}
+                <p className="u-mono break-all text-[13.5px] text-fg">{selected.caption}</p>
+                {selected.sub ? <p className="mt-1 text-[12px] text-fg-subtle">{selected.sub}</p> : null}
 
                 {selected.meta ? (
                   <dl className="mt-4 space-y-2 border-t border-rule pt-3 text-[11.5px]">
@@ -284,8 +316,8 @@ export function ExplorerClient({ initialSeed, initialId }: { initialSeed: SeedKi
                       .slice(0, 6)
                       .map(([key, value]) => (
                         <div key={key} className="flex justify-between gap-3">
-                          <dt className="text-lichen">{key}</dt>
-                          <dd className="u-mono truncate text-bone-dim">{String(value)}</dd>
+                          <dt className="text-fg-subtle">{key}</dt>
+                          <dd className="u-mono truncate text-fg-muted">{String(value)}</dd>
                         </div>
                       ))}
                   </dl>
@@ -311,22 +343,22 @@ export function ExplorerClient({ initialSeed, initialId }: { initialSeed: SeedKi
             ) : (
               <>
                 <p className="u-eyebrow mb-2">Inspector</p>
-                <p className="text-[12.5px] leading-relaxed text-lichen">
-                  Click a node to inspect it. Drag to pull it around, drag the background to pan, scroll to
-                  zoom.
+                <p className="text-[12.5px] leading-relaxed text-fg-subtle">
+                  Hover any node to trace its route back to the centre — everything off the path dims. Click
+                  to inspect, drag to pull a node around, drag the background to pan, scroll to zoom.
                 </p>
-                <div className="mt-4 space-y-2 border-t border-rule pt-3 text-[11.5px] text-lichen">
+                <div className="mt-4 space-y-2 border-t border-rule pt-3 text-[11.5px] text-fg-subtle">
                   <p>
-                    <span className="u-mono text-bone-dim">Solid edges</span> are structural: uses, depends
-                    on, has version.
+                    <span className="u-mono text-fg-muted">Colour</span> is distance from where you started —
+                    light at the surface, dark at the bedrock, the same ramp the dependency chains use.
                   </p>
                   <p>
-                    <span className="u-mono text-bone-dim">Dashed edges</span> are advisory, call and
-                    name-similarity links.
+                    <span className="u-mono text-fg-muted">Dashed edges</span> are advisories, service calls
+                    and name-similarity links. Solid ones are structural.
                   </p>
                   <p>
-                    <span className="u-mono text-bone-dim">Node size</span> tracks how many relationships
-                    touch it.
+                    <span className="u-mono text-fg-muted">Size</span> tracks how many relationships touch a
+                    node, so the chokepoints are the big ones.
                   </p>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-1.5 border-t border-rule pt-3">

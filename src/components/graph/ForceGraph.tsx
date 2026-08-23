@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  forceCenter,
   forceCollide,
   forceLink,
   forceManyBody,
@@ -14,30 +13,45 @@ import {
 } from "d3-force";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type { GraphEdge, GraphNode, GraphPayload, NodeLabel } from "@/lib/domain/types";
+import type { GraphNode, GraphPayload, NodeLabel } from "@/lib/domain/types";
 
 /**
- * A canvas force layout, hand-rolled on top of d3-force.
+ * The explorer's canvas.
+ *
+ * Two ideas do most of the work here.
+ *
+ * First, **nodes are coloured by how far they sit from the thing you asked
+ * about**, on the same depth ramp the dependency chains use everywhere else in
+ * the application. That turns an undifferentiated hairball into a picture with
+ * a readable gradient: light at the surface, dark at the bedrock. Colouring by
+ * node type is available too, but depth is the default because depth is the
+ * question this product exists to answer.
+ *
+ * Second, **hovering traces the route back to the seed**. Everything not on the
+ * path dims. That is the single most useful thing a supply-chain graph can do,
+ * and it costs one breadth-first search computed once per layout.
  *
  * Canvas rather than SVG because a few hundred nodes with per-frame repaints is
- * where SVG starts dropping frames, and because the drawing is decorative
- * enough that the accessible representation belongs elsewhere — the same
- * subgraph is available as a table on every detail page, which is what a
- * screen-reader user should be given instead of a canvas.
+ * where SVG starts dropping frames. The accessible representation is not the
+ * canvas — it is the same subgraph rendered as tables on every detail page.
  */
 
-type SimNode = GraphNode & SimulationNodeDatum & { degree: number };
+type SimNode = GraphNode & SimulationNodeDatum & { degree: number; hop: number };
 type SimLink = SimulationLinkDatum<SimNode> & { type: string; id: string };
 
-const NODE_STYLE: Record<NodeLabel, { fill: string; radius: number }> = {
-  Service: { fill: "#86b0c0", radius: 8.5 },
-  Team: { fill: "#918475", radius: 7 },
-  Package: { fill: "#c09a63", radius: 6 },
-  Version: { fill: "#855f36", radius: 4 },
-  Advisory: { fill: "#e25a5a", radius: 7 },
-  Maintainer: { fill: "#c9bcab", radius: 6 },
-  License: { fill: "#ecd76d", radius: 5.5 },
+export type ColorMode = "depth" | "kind";
+
+const KIND_STYLE: Record<NodeLabel, { fill: string; radius: number }> = {
+  Service: { fill: "#8aa4ff", radius: 9 },
+  Team: { fill: "#a3adbf", radius: 7 },
+  Package: { fill: "#5fc9c0", radius: 6.5 },
+  Version: { fill: "#647cc4", radius: 4.5 },
+  Advisory: { fill: "#e25a5a", radius: 7.5 },
+  Maintainer: { fill: "#c9a2f0", radius: 6.5 },
+  License: { fill: "#ecd76d", radius: 6 },
 };
+
+const DEPTH_FILL = ["#e6ecff", "#c3d0f7", "#a2b4ee", "#8298df", "#647cc4", "#4c619f", "#3a4b78"];
 
 const SEVERITY_FILL: Record<string, string> = {
   CRITICAL: "#e25a5a",
@@ -47,32 +61,31 @@ const SEVERITY_FILL: Record<string, string> = {
 };
 
 const EDGE_STYLE: Record<string, { stroke: string; width: number; dashed?: boolean }> = {
-  OWNS: { stroke: "#918475", width: 1 },
-  CALLS: { stroke: "#86b0c0", width: 1.2, dashed: true },
-  USES: { stroke: "#86b0c0", width: 1.4 },
-  HAS_VERSION: { stroke: "#5b4a3a", width: 0.8 },
-  DEPENDS_ON: { stroke: "#7a5f43", width: 1 },
-  AFFECTS: { stroke: "#e25a5a", width: 1.3, dashed: true },
-  MAINTAINS: { stroke: "#918475", width: 1 },
-  LICENSED_UNDER: { stroke: "#8a7a4a", width: 0.8 },
-  SUPERSEDES: { stroke: "#4a3d31", width: 0.8 },
-  SIMILAR_TO: { stroke: "#e59318", width: 1.2, dashed: true },
-  PUBLISHED: { stroke: "#5b4a3a", width: 0.8 },
+  OWNS: { stroke: "#6f7a90", width: 1 },
+  CALLS: { stroke: "#8aa4ff", width: 1.3, dashed: true },
+  USES: { stroke: "#8aa4ff", width: 1.5 },
+  HAS_VERSION: { stroke: "#3a4356", width: 0.9 },
+  DEPENDS_ON: { stroke: "#4c5a80", width: 1.1 },
+  AFFECTS: { stroke: "#e25a5a", width: 1.4, dashed: true },
+  MAINTAINS: { stroke: "#8b74b8", width: 1 },
+  LICENSED_UNDER: { stroke: "#8a7d45", width: 0.9 },
+  SUPERSEDES: { stroke: "#333b4b", width: 0.9 },
+  SIMILAR_TO: { stroke: "#e59318", width: 1.3, dashed: true },
+  PUBLISHED: { stroke: "#3a4356", width: 0.8 },
 };
 
-const nodeFill = (node: GraphNode) =>
-  node.label === "Advisory" && node.severity
-    ? (SEVERITY_FILL[node.severity] ?? NODE_STYLE.Advisory.fill)
-    : (NODE_STYLE[node.label]?.fill ?? "#918475");
+const clampHop = (hop: number) => Math.max(0, Math.min(6, hop));
 
 export function ForceGraph({
   payload,
   onSelect,
   selectedId,
+  colorMode = "depth",
 }: {
   payload: GraphPayload;
   onSelect?: (node: GraphNode | null) => void;
   selectedId?: string | null;
+  colorMode?: ColorMode;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -80,40 +93,93 @@ export function ForceGraph({
   const nodesRef = useRef<SimNode[]>([]);
   const linksRef = useRef<SimLink[]>([]);
   const viewRef = useRef({ x: 0, y: 0, k: 1 });
-  const dragRef = useRef<{ node: SimNode | null; pointer: { x: number; y: number } | null }>({
+  const animRef = useRef(0);
+  const dragRef = useRef<{ node: SimNode | null; pointer: { x: number; y: number } | null; moved: boolean }>({
     node: null,
     pointer: null,
+    moved: false,
   });
-  // The tooltip stores its own clamped position, so nothing reads a ref during
-  // render, and "settled" is keyed to the payload so a new subgraph is
-  // automatically un-settled without a synchronous setState in the effect.
+  const hoverRef = useRef<string | null>(null);
+
   const [hovered, setHovered] = useState<{ node: SimNode; left: number; top: number } | null>(null);
   const [settledKey, setSettledKey] = useState<string | null>(null);
-  const payloadKey = `${payload.seed.id}|${payload.nodes.length}|${payload.edges.length}`;
-  const ready = settledKey === payloadKey;
 
-  const { nodes, links } = useMemo(() => {
+  const payloadKey = `${payload.seed.id}|${payload.nodes.length}|${payload.edges.length}|${colorMode}`;
+  const settling = settledKey !== payloadKey;
+
+  /**
+   * Nodes, links, and — the important part — each node's hop distance from the
+   * seed plus the parent that got us there. One BFS gives both the colour ramp
+   * and the "trace the route back" interaction.
+   */
+  /**
+   * Read-only derived data. The mutable simulation objects are built inside the
+   * effect below — d3-force mutates its nodes every tick, and something the
+   * render produced is the wrong place to keep state that a physics loop owns.
+   */
+  const graph = useMemo(() => {
     const degree = new Map<string, number>();
+    const neighbours = new Map<string, string[]>();
+    const push = (a: string, b: string) => {
+      const list = neighbours.get(a);
+      if (list) list.push(b);
+      else neighbours.set(a, [b]);
+    };
     for (const edge of payload.edges) {
       degree.set(edge.source, (degree.get(edge.source) ?? 0) + 1);
       degree.set(edge.target, (degree.get(edge.target) ?? 0) + 1);
+      push(edge.source, edge.target);
+      push(edge.target, edge.source);
     }
-    const simNodes: SimNode[] = payload.nodes.map((node) => ({ ...node, degree: degree.get(node.id) ?? 0 }));
-    const byId = new Map(simNodes.map((node) => [node.id, node]));
-    const simLinks: SimLink[] = payload.edges
-      .filter((edge) => byId.has(edge.source) && byId.has(edge.target))
-      .map((edge: GraphEdge) => ({
-        id: edge.id,
-        type: edge.type,
-        source: byId.get(edge.source)!,
-        target: byId.get(edge.target)!,
-      }));
-    return { nodes: simNodes, links: simLinks };
+
+    const hop = new Map<string, number>();
+    const parentOf = new Map<string, string>();
+    const queue = [payload.seed.id];
+    hop.set(payload.seed.id, 0);
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      for (const next of neighbours.get(current) ?? []) {
+        if (hop.has(next)) continue;
+        hop.set(next, (hop.get(current) ?? 0) + 1);
+        parentOf.set(next, current);
+        queue.push(next);
+      }
+    }
+
+    let maxHop = 0;
+    for (const value of hop.values()) maxHop = Math.max(maxHop, value);
+
+    return { degree, hop, parentOf, maxHop, nodes: payload.nodes, edges: payload.edges };
   }, [payload]);
 
+  const { parentOf, maxHop } = graph;
+
   const radiusOf = useCallback(
-    (node: SimNode) => (NODE_STYLE[node.label]?.radius ?? 5) + Math.min(5, Math.sqrt(node.degree) * 1.1),
+    (node: SimNode) => (KIND_STYLE[node.label]?.radius ?? 5) + Math.min(6, Math.sqrt(node.degree) * 1.15),
     [],
+  );
+
+  const fillOf = useCallback(
+    (node: SimNode) => {
+      if (node.label === "Advisory" && node.severity) return SEVERITY_FILL[node.severity] ?? "#e25a5a";
+      if (colorMode === "kind") return KIND_STYLE[node.label]?.fill ?? "#a3adbf";
+      return DEPTH_FILL[clampHop(node.hop)];
+    },
+    [colorMode],
+  );
+
+  /** The chain of node ids from a node back to the seed. */
+  const routeToSeed = useCallback(
+    (id: string) => {
+      const chain = new Set<string>();
+      let cursor: string | undefined = id;
+      while (cursor && !chain.has(cursor)) {
+        chain.add(cursor);
+        cursor = parentOf.get(cursor);
+      }
+      return chain;
+    },
+    [parentOf],
   );
 
   const draw = useCallback(() => {
@@ -126,137 +192,285 @@ export function ForceGraph({
     const height = canvas.height / dpr;
     const view = viewRef.current;
 
-    context.save();
     context.setTransform(dpr, 0, 0, dpr, 0, 0);
     context.clearRect(0, 0, width, height);
+    context.save();
     context.translate(view.x, view.y);
     context.scale(view.k, view.k);
 
-    const selected = selectedId ?? null;
-    const neighbours = new Set<string>();
-    if (selected) {
-      for (const link of linksRef.current) {
-        const s = link.source as SimNode;
-        const t = link.target as SimNode;
-        if (s.id === selected) neighbours.add(t.id);
-        if (t.id === selected) neighbours.add(s.id);
-      }
-    }
+    // Focus is the hovered node if there is one, otherwise the selected node.
+    const focusId = hoverRef.current ?? selectedId ?? null;
+    const lit = focusId ? routeToSeed(focusId) : null;
 
+    // ── edges ───────────────────────────────────────────────────────────────
     for (const link of linksRef.current) {
       const s = link.source as SimNode;
       const t = link.target as SimNode;
-      if (s.x == null || t.x == null) continue;
-      const style = EDGE_STYLE[link.type] ?? { stroke: "#4a3d31", width: 0.8 };
-      const touchesSelection = selected ? s.id === selected || t.id === selected : true;
+      if (s.x == null || t.x == null || s.y == null || t.y == null) continue;
+
+      const style = EDGE_STYLE[link.type] ?? { stroke: "#333b4b", width: 0.9 };
+      const onRoute = lit ? lit.has(s.id) && lit.has(t.id) : false;
 
       context.beginPath();
-      context.moveTo(s.x, s.y ?? 0);
-      context.lineTo(t.x, t.y ?? 0);
-      context.strokeStyle = style.stroke;
-      context.globalAlpha = touchesSelection ? 0.62 : 0.14;
-      context.lineWidth = style.width / Math.max(0.7, view.k * 0.85);
-      context.setLineDash(style.dashed ? [3 / view.k, 3 / view.k] : []);
+      context.moveTo(s.x, s.y);
+      // A gentle arc reads as a connection rather than a wireframe strut, and
+      // it keeps parallel edges between the same pair from overlapping.
+      const mx = (s.x + t.x) / 2;
+      const my = (s.y + t.y) / 2;
+      const dx = t.x - s.x;
+      const dy = t.y - s.y;
+      context.quadraticCurveTo(mx - dy * 0.08, my + dx * 0.08, t.x, t.y);
+
+      context.strokeStyle = onRoute ? "#aec0ff" : style.stroke;
+      context.globalAlpha = lit ? (onRoute ? 0.95 : 0.07) : 0.5;
+      context.lineWidth = (onRoute ? style.width + 0.8 : style.width) / Math.max(0.75, view.k * 0.85);
+      context.setLineDash(style.dashed ? [3.5 / view.k, 3.5 / view.k] : []);
       context.stroke();
     }
     context.setLineDash([]);
-    context.globalAlpha = 1;
 
-    for (const node of nodesRef.current) {
+    // ── nodes, biggest first so labels compete fairly ───────────────────────
+    const ordered = [...nodesRef.current].sort((a, b) => radiusOf(b) - radiusOf(a));
+
+    for (const node of ordered) {
       if (node.x == null || node.y == null) continue;
       const radius = radiusOf(node);
-      const dimmed = selected ? node.id !== selected && !neighbours.has(node.id) : false;
+      const isSeed = node.id === payload.seed.id;
+      const onRoute = lit ? lit.has(node.id) : true;
 
-      context.globalAlpha = dimmed ? 0.22 : 1;
+      if (isSeed || node.id === focusId) {
+        context.globalAlpha = 0.18;
+        context.beginPath();
+        context.arc(node.x, node.y, radius + 8 / view.k, 0, Math.PI * 2);
+        context.fillStyle = isSeed ? "#e9edf5" : "#aec0ff";
+        context.fill();
+      }
+
+      context.globalAlpha = onRoute ? 1 : 0.16;
       context.beginPath();
       context.arc(node.x, node.y, radius, 0, Math.PI * 2);
-      context.fillStyle = nodeFill(node);
+      context.fillStyle = fillOf(node);
       context.fill();
 
-      // A ring in the ground colour keeps overlapping marks readable.
-      context.lineWidth = 1.6 / view.k;
-      context.strokeStyle = node.id === payload.seed.id ? "#efe7dc" : "#14100d";
+      context.lineWidth = (isSeed ? 2.4 : 1.6) / view.k;
+      context.strokeStyle = isSeed ? "#e9edf5" : "#0b0e14";
       context.stroke();
 
-      const showLabel =
-        view.k > 0.75 && (radius > 6.5 || node.id === selected || node.id === payload.seed.id);
-      if (showLabel && !dimmed) {
-        context.globalAlpha = 1;
-        context.font = `${11 / view.k}px "IBM Plex Mono", ui-monospace, monospace`;
-        context.fillStyle = "#c9bcab";
-        context.textAlign = "center";
-        context.textBaseline = "top";
-        const caption = node.caption.length > 26 ? `${node.caption.slice(0, 25)}…` : node.caption;
-        context.fillText(caption, node.x, node.y + radius + 3 / view.k);
+      // Services get a second ring so the operational layer stays findable
+      // even when everything is coloured by depth.
+      if (node.label === "Service" && colorMode === "depth" && !isSeed) {
+        context.beginPath();
+        context.arc(node.x, node.y, radius + 3 / view.k, 0, Math.PI * 2);
+        context.strokeStyle = "#8aa4ff";
+        context.globalAlpha = onRoute ? 0.75 : 0.12;
+        context.lineWidth = 1.2 / view.k;
+        context.stroke();
       }
+    }
+
+    // ── labels, second pass, collision-culled ───────────────────────────────
+    const claimed: Array<[number, number, number, number]> = [];
+    const fontPx = 11 / view.k;
+    context.font = `500 ${fontPx}px "IBM Plex Mono", ui-monospace, monospace`;
+    context.textAlign = "center";
+    context.textBaseline = "top";
+
+    for (const node of ordered) {
+      if (node.x == null || node.y == null) continue;
+      const onRoute = lit ? lit.has(node.id) : true;
+      if (!onRoute) continue;
+
+      const radius = radiusOf(node);
+      const forced = node.id === focusId || node.id === payload.seed.id || (lit?.has(node.id) ?? false);
+      if (!forced && (view.k < 0.55 || radius < 6)) continue;
+
+      const caption = node.caption.length > 26 ? `${node.caption.slice(0, 25)}…` : node.caption;
+      const w = context.measureText(caption).width;
+      const x = node.x - w / 2;
+      const y = node.y + radius + 4 / view.k;
+      const h = fontPx * 1.25;
+
+      const collides = claimed.some(
+        ([cx, cy, cw, ch]) => x < cx + cw && x + w > cx && y < cy + ch && y + h > cy,
+      );
+      if (collides && !forced) continue;
+      claimed.push([x, y, w, h]);
+
+      // A tinted plate keeps the text readable where it crosses an edge.
+      context.globalAlpha = 0.72;
+      context.fillStyle = "#0b0e14";
+      context.fillRect(x - 3 / view.k, y - 1 / view.k, w + 6 / view.k, h);
+
+      context.globalAlpha = 1;
+      context.fillStyle = forced ? "#e9edf5" : "#a3adbf";
+      context.fillText(caption, node.x, y);
     }
 
     context.globalAlpha = 1;
     context.restore();
-  }, [payload.seed.id, radiusOf, selectedId]);
+  }, [payload.seed.id, radiusOf, fillOf, routeToSeed, selectedId, colorMode]);
+
+  /** Eases the viewport to a target transform instead of snapping. */
+  const animateTo = useCallback(
+    (target: { x: number; y: number; k: number }, duration = 380) => {
+      cancelAnimationFrame(animRef.current);
+      const from = { ...viewRef.current };
+      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (reduced || duration === 0) {
+        viewRef.current = target;
+        draw();
+        return;
+      }
+      const start = performance.now();
+      const step = (now: number) => {
+        const t = Math.min(1, (now - start) / duration);
+        const e = 1 - (1 - t) ** 3; // easeOutCubic
+        viewRef.current = {
+          x: from.x + (target.x - from.x) * e,
+          y: from.y + (target.y - from.y) * e,
+          k: from.k + (target.k - from.k) * e,
+        };
+        draw();
+        if (t < 1) animRef.current = requestAnimationFrame(step);
+      };
+      animRef.current = requestAnimationFrame(step);
+    },
+    [draw],
+  );
+
+  /** Frames the whole subgraph. Runs once the layout settles, and on "fit". */
+  const fitToContent = useCallback(
+    (animate = true) => {
+      const canvas = canvasRef.current;
+      const all = nodesRef.current;
+      if (!canvas || all.length === 0) return;
+
+      let minX = Infinity;
+      let minY = Infinity;
+      let maxX = -Infinity;
+      let maxY = -Infinity;
+      for (const node of all) {
+        if (node.x == null || node.y == null) continue;
+        const r = radiusOf(node) + 18;
+        minX = Math.min(minX, node.x - r);
+        minY = Math.min(minY, node.y - r);
+        maxX = Math.max(maxX, node.x + r);
+        maxY = Math.max(maxY, node.y + r);
+      }
+      if (!Number.isFinite(minX)) return;
+
+      const width = canvas.clientWidth || canvas.width;
+      const height = canvas.clientHeight || canvas.height;
+      const spanX = Math.max(1, maxX - minX);
+      const spanY = Math.max(1, maxY - minY);
+      const k = Math.min(2.4, Math.max(0.18, Math.min(width / spanX, height / spanY)));
+
+      animateTo(
+        { k, x: width / 2 - ((minX + maxX) / 2) * k, y: height / 2 - ((minY + maxY) / 2) * k },
+        animate ? 420 : 0,
+      );
+    },
+    [animateTo, radiusOf],
+  );
 
   // ── simulation ────────────────────────────────────────────────────────────
   useEffect(() => {
-    nodesRef.current = nodes;
-    linksRef.current = links;
-
     const canvas = canvasRef.current;
     if (!canvas) return;
     const width = canvas.clientWidth || 800;
-    const height = canvas.clientHeight || 520;
-
+    const height = canvas.clientHeight || 620;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    const simulation = forceSimulation<SimNode>(nodes)
+    // Build the mutable layout objects here, seeded as concentric rings by hop
+    // distance. Starting from a structured guess rather than random noise makes
+    // the settled picture legible and the animation calm instead of explosive.
+    const simNodes: SimNode[] = graph.nodes.map((node, index) => {
+      const hop = graph.hop.get(node.id) ?? 6;
+      const ring = clampHop(hop);
+      const angle = (index / Math.max(1, graph.nodes.length)) * Math.PI * 2 * 3.7;
+      return {
+        ...node,
+        degree: graph.degree.get(node.id) ?? 0,
+        hop,
+        x: width / 2 + Math.cos(angle) * ring * 95,
+        y: height / 2 + Math.sin(angle) * ring * 95,
+      };
+    });
+
+    const byId = new Map(simNodes.map((node) => [node.id, node]));
+    const simLinks: SimLink[] = graph.edges
+      .filter((edge) => byId.has(edge.source) && byId.has(edge.target))
+      .map((edge) => ({
+        id: edge.id,
+        type: edge.type,
+        source: byId.get(edge.source)!,
+        target: byId.get(edge.target)!,
+      }));
+
+    nodesRef.current = simNodes;
+    linksRef.current = simLinks;
+
+    const simulation = forceSimulation<SimNode>(simNodes)
       .force(
         "link",
-        forceLink<SimNode, SimLink>(links)
+        forceLink<SimNode, SimLink>(simLinks)
           .id((node) => node.id)
-          .distance((link) => ((link as SimLink).type === "HAS_VERSION" ? 26 : 54))
-          .strength(0.35),
+          .distance((link) => ((link as SimLink).type === "HAS_VERSION" ? 30 : 74))
+          .strength(0.22),
       )
       .force(
         "charge",
-        forceManyBody<SimNode>().strength((node) => -70 - node.degree * 8),
+        forceManyBody<SimNode>()
+          .strength((node) => -190 - node.degree * 16)
+          .distanceMax(620),
       )
       .force(
         "collide",
-        forceCollide<SimNode>().radius((node) => radiusOf(node) + 5),
+        forceCollide<SimNode>()
+          .radius((node) => radiusOf(node) + 11)
+          .iterations(2),
       )
-      .force("center", forceCenter(width / 2, height / 2))
-      .force("x", forceX(width / 2).strength(0.035))
-      .force("y", forceY(height / 2).strength(0.035))
-      .alphaDecay(reduced ? 0.35 : 0.028);
+      .force("x", forceX<SimNode>(width / 2).strength(0.02))
+      .force("y", forceY<SimNode>(height / 2).strength(0.02))
+      .alphaDecay(reduced ? 0.35 : 0.024);
 
     simRef.current = simulation;
 
-    // Pin the seed so the picture keeps a stable anchor between depth changes.
-    const seed = nodes.find((node) => node.id === payload.seed.id);
+    const seed = byId.get(payload.seed.id);
     if (seed) {
       seed.fx = width / 2;
       seed.fy = height / 2;
     }
 
-    simulation.on("tick", draw);
-    simulation.on("end", () => setSettledKey(payloadKey));
+    // Re-frame every few ticks while the layout is still moving. Watching a
+    // graph settle inside the frame feels considered; watching it drift off the
+    // edge and snap back at the end does not.
+    let tick = 0;
+    simulation.on("tick", () => {
+      tick += 1;
+      if (tick < 150 && tick % 6 === 0) fitToContent(false);
+      draw();
+    });
+    simulation.on("end", () => {
+      fitToContent(true);
+      setSettledKey(payloadKey);
+    });
 
-    // With reduced motion we run the layout to completion in one go and paint
-    // the finished state, marking it settled after the frame rather than
-    // during the effect.
     let frame = 0;
     if (reduced) {
-      simulation.tick(180);
+      simulation.tick(200);
       simulation.stop();
-      draw();
+      fitToContent(false);
       frame = requestAnimationFrame(() => setSettledKey(payloadKey));
     }
 
     return () => {
       if (frame) cancelAnimationFrame(frame);
+      cancelAnimationFrame(animRef.current);
       simulation.stop();
       simRef.current = null;
     };
-  }, [nodes, links, draw, radiusOf, payload.seed.id, payloadKey]);
+  }, [graph, draw, radiusOf, fitToContent, payload.seed.id, payloadKey]);
 
   // ── canvas sizing ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -266,10 +480,13 @@ export function ForceGraph({
 
     const resize = () => {
       const dpr = window.devicePixelRatio || 1;
-      canvas.width = wrap.clientWidth * dpr;
-      canvas.height = wrap.clientHeight * dpr;
-      canvas.style.width = `${wrap.clientWidth}px`;
-      canvas.style.height = `${wrap.clientHeight}px`;
+      const w = wrap.clientWidth;
+      const h = wrap.clientHeight;
+      if (w === 0 || h === 0) return;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${h}px`;
       draw();
     };
 
@@ -279,41 +496,51 @@ export function ForceGraph({
     return () => observer.disconnect();
   }, [draw]);
 
-  // ── pointer interaction ───────────────────────────────────────────────────
-  const toWorld = (event: React.PointerEvent | React.MouseEvent | React.WheelEvent) => {
-    const canvas = canvasRef.current!;
-    const rect = canvas.getBoundingClientRect();
-    const view = viewRef.current;
-    return {
-      x: (event.clientX - rect.left - view.x) / view.k,
-      y: (event.clientY - rect.top - view.y) / view.k,
-      sx: event.clientX - rect.left,
-      sy: event.clientY - rect.top,
+  // Escape clears the selection.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onSelect?.(null);
     };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onSelect]);
+
+  // ── pointer interaction ───────────────────────────────────────────────────
+  const toLocal = (event: React.PointerEvent | React.MouseEvent | React.WheelEvent) => {
+    const rect = canvasRef.current!.getBoundingClientRect();
+    const view = viewRef.current;
+    const sx = event.clientX - rect.left;
+    const sy = event.clientY - rect.top;
+    return { x: (sx - view.x) / view.k, y: (sy - view.y) / view.k, sx, sy };
   };
 
   const nodeAt = (x: number, y: number): SimNode | null => {
-    for (let i = nodesRef.current.length - 1; i >= 0; i -= 1) {
-      const node = nodesRef.current[i];
+    let best: SimNode | null = null;
+    let bestDist = Infinity;
+    for (const node of nodesRef.current) {
       if (node.x == null || node.y == null) continue;
-      const r = radiusOf(node) + 4;
-      if ((node.x - x) ** 2 + (node.y - y) ** 2 <= r * r) return node;
+      const r = radiusOf(node) + 5;
+      const d = (node.x - x) ** 2 + (node.y - y) ** 2;
+      if (d <= r * r && d < bestDist) {
+        best = node;
+        bestDist = d;
+      }
     }
-    return null;
+    return best;
   };
 
   const onPointerDown = (event: React.PointerEvent<HTMLCanvasElement>) => {
-    const { x, y } = toWorld(event);
+    const { x, y } = toLocal(event);
     const node = nodeAt(x, y);
-    (event.target as HTMLCanvasElement).setPointerCapture(event.pointerId);
+    event.currentTarget.setPointerCapture(event.pointerId);
 
     if (node) {
-      dragRef.current = { node, pointer: null };
-      simRef.current?.alphaTarget(0.24).restart();
+      dragRef.current = { node, pointer: null, moved: false };
+      simRef.current?.alphaTarget(0.2).restart();
       node.fx = node.x;
       node.fy = node.y;
     } else {
-      dragRef.current = { node: null, pointer: { x: event.clientX, y: event.clientY } };
+      dragRef.current = { node: null, pointer: { x: event.clientX, y: event.clientY }, moved: false };
     }
   };
 
@@ -321,9 +548,10 @@ export function ForceGraph({
     const drag = dragRef.current;
 
     if (drag.node) {
-      const { x, y } = toWorld(event);
+      const { x, y } = toLocal(event);
       drag.node.fx = x;
       drag.node.fy = y;
+      drag.moved = true;
       return;
     }
 
@@ -332,20 +560,26 @@ export function ForceGraph({
       view.x += event.clientX - drag.pointer.x;
       view.y += event.clientY - drag.pointer.y;
       drag.pointer = { x: event.clientX, y: event.clientY };
+      drag.moved = true;
       draw();
       return;
     }
 
-    const { x, y, sx, sy } = toWorld(event);
+    const { x, y, sx, sy } = toLocal(event);
     const node = nodeAt(x, y);
     const width = event.currentTarget.clientWidth;
     const height = event.currentTarget.clientHeight;
+
+    if (hoverRef.current !== (node?.id ?? null)) {
+      hoverRef.current = node?.id ?? null;
+      draw();
+    }
     setHovered(
       node
         ? {
             node,
-            left: Math.max(8, Math.min(sx + 14, width - 268)),
-            top: Math.max(8, Math.min(sy + 14, height - 90)),
+            left: Math.max(8, Math.min(sx + 16, width - 272)),
+            top: Math.max(8, Math.min(sy + 16, height - 104)),
           }
         : null,
     );
@@ -360,21 +594,28 @@ export function ForceGraph({
         drag.node.fx = null;
         drag.node.fy = null;
       }
+      // A tap that never moved is a selection, not a drag.
+      if (!drag.moved) onSelect?.(drag.node);
+    } else if (!drag.moved) {
+      onSelect?.(null);
     }
-    dragRef.current = { node: null, pointer: null };
-    (event.target as HTMLCanvasElement).releasePointerCapture(event.pointerId);
+    dragRef.current = { node: null, pointer: null, moved: false };
+    event.currentTarget.releasePointerCapture(event.pointerId);
   };
 
-  const onClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
-    const { x, y } = toWorld(event);
-    onSelect?.(nodeAt(x, y));
+  const onPointerLeave = () => {
+    if (hoverRef.current !== null) {
+      hoverRef.current = null;
+      draw();
+    }
+    setHovered(null);
   };
 
   const onWheel = (event: React.WheelEvent<HTMLCanvasElement>) => {
+    cancelAnimationFrame(animRef.current);
     const view = viewRef.current;
-    const { sx, sy } = toWorld(event);
-    const factor = Math.exp(-event.deltaY * 0.0016);
-    const next = Math.min(4, Math.max(0.25, view.k * factor));
+    const { sx, sy } = toLocal(event);
+    const next = Math.min(4, Math.max(0.15, view.k * Math.exp(-event.deltaY * 0.0016)));
     view.x = sx - ((sx - view.x) / view.k) * next;
     view.y = sy - ((sy - view.y) / view.k) * next;
     view.k = next;
@@ -387,25 +628,20 @@ export function ForceGraph({
     const view = viewRef.current;
     const cx = canvas.clientWidth / 2;
     const cy = canvas.clientHeight / 2;
-    const next = Math.min(4, Math.max(0.25, view.k * factor));
-    view.x = cx - ((cx - view.x) / view.k) * next;
-    view.y = cy - ((cy - view.y) / view.k) * next;
-    view.k = next;
-    draw();
+    const next = Math.min(4, Math.max(0.15, view.k * factor));
+    animateTo(
+      { k: next, x: cx - ((cx - view.x) / view.k) * next, y: cy - ((cy - view.y) / view.k) * next },
+      220,
+    );
   };
 
-  const reset = () => {
-    viewRef.current = { x: 0, y: 0, k: 1 };
-    simRef.current?.alpha(0.6).restart();
-    draw();
-  };
-
-  const present = new Set(payload.nodes.map((node) => node.label));
+  const presentKinds = new Set(payload.nodes.map((node) => node.label));
+  const hopSteps = Array.from({ length: Math.min(6, Math.max(1, maxHop)) + 1 }, (_, i) => i);
 
   return (
     <div
       ref={wrapRef}
-      className="relative h-[560px] w-full overflow-hidden rounded-[5px] border border-rule bg-[var(--peat-sunken)]"
+      className="relative h-[620px] w-full overflow-hidden rounded-[10px] border border-rule bg-well"
     >
       <canvas
         ref={canvasRef}
@@ -414,80 +650,103 @@ export function ForceGraph({
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        onPointerLeave={() => setHovered(null)}
-        onClick={onClick}
+        onPointerLeave={onPointerLeave}
         onWheel={onWheel}
         role="img"
         aria-label={`Graph of ${payload.nodes.length} nodes and ${payload.edges.length} relationships around ${payload.seed.id}. The same data is available as tables on the detail pages.`}
       />
 
-      {!ready ? (
+      {settling ? (
         <div className="pointer-events-none absolute left-1/2 top-4 -translate-x-1/2">
-          <span className="breathe u-mono rounded-full border border-rule bg-[var(--peat-raised)] px-3 py-1 text-[10px] uppercase tracking-[0.13em] text-lichen">
-            settling
+          <span className="breathe u-mono rounded-full border border-rule bg-surface px-3 py-1 text-[10px] uppercase tracking-[0.13em] text-fg-subtle">
+            finding a layout
           </span>
         </div>
       ) : null}
 
       {/* legend */}
-      <div className="pointer-events-none absolute bottom-3 left-3 flex flex-wrap gap-x-3.5 gap-y-1.5 rounded border border-rule bg-[color-mix(in_srgb,var(--peat)_85%,transparent)] px-3 py-2 backdrop-blur-sm">
-        {(Object.keys(NODE_STYLE) as NodeLabel[])
-          .filter((label) => present.has(label))
-          .map((label) => (
-            <span key={label} className="flex items-center gap-1.5">
-              <span
-                className="inline-block rounded-full"
-                style={{ width: 7, height: 7, background: NODE_STYLE[label].fill }}
-              />
-              <span className="u-mono text-[9.5px] uppercase tracking-[0.1em] text-lichen">{label}</span>
-            </span>
-          ))}
+      <div className="pointer-events-none absolute bottom-3 left-3 rounded-lg border border-rule bg-[color-mix(in_srgb,var(--ink)_82%,transparent)] px-3 py-2.5 backdrop-blur-sm">
+        {colorMode === "depth" ? (
+          <>
+            <p className="u-mono mb-1.5 text-[9px] uppercase tracking-[0.13em] text-fg-faint">
+              hops from {payload.seed.label.toLowerCase()}
+            </p>
+            <div className="flex items-center gap-1">
+              {hopSteps.map((hop) => (
+                <span key={hop} className="flex flex-col items-center gap-1">
+                  <span
+                    className="block h-[9px] w-[22px] rounded-sm"
+                    style={{ background: DEPTH_FILL[clampHop(hop)] }}
+                  />
+                  <span className="u-mono text-[8.5px] text-fg-faint">{hop}</span>
+                </span>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="flex max-w-[380px] flex-wrap gap-x-3 gap-y-1.5">
+            {(Object.keys(KIND_STYLE) as NodeLabel[])
+              .filter((label) => presentKinds.has(label))
+              .map((label) => (
+                <span key={label} className="flex items-center gap-1.5">
+                  <span
+                    className="inline-block rounded-full"
+                    style={{ width: 7, height: 7, background: KIND_STYLE[label].fill }}
+                  />
+                  <span className="u-mono text-[9px] uppercase tracking-[0.1em] text-fg-subtle">{label}</span>
+                </span>
+              ))}
+          </div>
+        )}
       </div>
 
       {/* controls */}
       <div className="absolute right-3 top-3 flex flex-col gap-1">
         <button
           type="button"
-          onClick={() => zoomBy(1.3)}
-          className="btn px-2 py-1 text-[13px]"
+          onClick={() => zoomBy(1.35)}
+          className="btn px-2.5 py-1 text-[14px]"
           aria-label="Zoom in"
         >
           +
         </button>
         <button
           type="button"
-          onClick={() => zoomBy(1 / 1.3)}
-          className="btn px-2 py-1 text-[13px]"
+          onClick={() => zoomBy(1 / 1.35)}
+          className="btn px-2.5 py-1 text-[14px]"
           aria-label="Zoom out"
         >
           −
         </button>
         <button
           type="button"
-          onClick={reset}
-          className="btn px-2 py-1 text-[9.5px] uppercase tracking-[0.1em]"
-          aria-label="Reset view"
+          onClick={() => fitToContent(true)}
+          className="btn px-2.5 py-1 text-[9px] uppercase tracking-[0.1em]"
+          aria-label="Fit the whole graph in view"
         >
           fit
         </button>
       </div>
 
-      {/* hover tooltip */}
+      {/* hover card */}
       {hovered ? (
         <div
-          className="pointer-events-none absolute z-10 max-w-[260px] rounded border border-rule bg-[var(--peat-high)] px-2.5 py-1.5 shadow-xl"
+          className="pointer-events-none absolute z-10 max-w-[264px] rounded-lg border border-rule bg-surface-2 px-3 py-2 shadow-2xl"
           style={{ left: hovered.left, top: hovered.top }}
         >
           <p
-            className="u-mono text-[9.5px] uppercase tracking-[0.11em]"
-            style={{ color: nodeFill(hovered.node) }}
+            className="u-mono text-[9px] uppercase tracking-[0.12em]"
+            style={{ color: fillOf(hovered.node) }}
           >
             {hovered.node.label}
+            {hovered.node.id !== payload.seed.id ? ` · ${hovered.node.hop} hops out` : " · start"}
           </p>
-          <p className="u-mono mt-0.5 break-all text-[11.5px] text-bone">{hovered.node.caption}</p>
-          {hovered.node.sub ? <p className="mt-0.5 text-[10.5px] text-lichen">{hovered.node.sub}</p> : null}
-          <p className="u-mono mt-1 text-[9.5px] text-lichen-faint">
-            {hovered.node.degree} connection{hovered.node.degree === 1 ? "" : "s"} · click to focus
+          <p className="u-mono mt-1 break-all text-[11.5px] text-fg">{hovered.node.caption}</p>
+          {hovered.node.sub ? (
+            <p className="mt-0.5 text-[10.5px] text-fg-subtle">{hovered.node.sub}</p>
+          ) : null}
+          <p className="u-mono mt-1.5 text-[9px] text-fg-faint">
+            {hovered.node.degree} connection{hovered.node.degree === 1 ? "" : "s"} · click to inspect
           </p>
         </div>
       ) : null}

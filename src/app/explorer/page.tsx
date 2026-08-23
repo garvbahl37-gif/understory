@@ -29,9 +29,7 @@ export default async function ExplorerPage({
         title="Walk the graph"
         lede="Every other page in this application is a projection of this. Here the subgraph is drawn as it is stored: labelled nodes, typed edges, and the paths between them assembled from several small edge-list queries running side by side."
       />
-      <Suspense
-        fallback={<div className="h-[560px] rounded-[5px] border border-rule bg-[var(--peat-sunken)]" />}
-      >
+      <Suspense fallback={<div className="h-[560px] rounded-[5px] border border-rule bg-[var(--well)]" />}>
         <ExplorerClient initialSeed={kind} initialId={id} />
       </Suspense>
     </Page>
