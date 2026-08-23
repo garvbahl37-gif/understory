@@ -125,7 +125,13 @@ html {
 }
 
 body {
-  background: var(--ink);
+  /* The ground is painted on <html> so that the two atmosphere layers below can
+     sit at z-index -1 — behind every element, without needing a rule that
+     forces a stacking context onto body's children. That rule used to exist and
+     it silently broke portalled overlays: a `position: fixed` dialog rendered
+     into <body> inherited `position: relative` from it and started positioning
+     against the document instead of the viewport. */
+  background: transparent;
   color: var(--fg);
   font-family: var(--font-sans);
   font-size: 14px;
@@ -143,7 +149,7 @@ body::before {
   content: "";
   position: fixed;
   inset: 0;
-  z-index: 0;
+  z-index: -1;
   pointer-events: none;
   opacity: 0.14;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
@@ -153,16 +159,9 @@ body::after {
   content: "";
   position: fixed;
   inset: 0;
-  z-index: 0;
+  z-index: -1;
   pointer-events: none;
   background: radial-gradient(120% 80% at 50% -20%, rgba(138, 164, 255, 0.07), transparent 62%);
-}
-
-/* Everything real sits above the two atmosphere layers. Overlays that must
-   escape a stacking context are portalled to the body and set their own z. */
-body > *:not(script) {
-  position: relative;
-  z-index: 1;
 }
 
 ::selection {
