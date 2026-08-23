@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { ForceGraph, type ColorMode } from "@/components/graph/ForceGraph";
+import { RadialTree } from "@/components/graph/RadialTree";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Portal, useScrollLock } from "@/components/ui/Portal";
 import { EmptyState, Panel, Tag } from "@/components/ui/primitives";
@@ -53,6 +54,7 @@ export function ExplorerClient({ initialSeed, initialId }: { initialSeed: SeedKi
   useScrollLock(pickerOpen);
 
   const [colorMode, setColorMode] = useState<ColorMode>("depth");
+  const [view, setView] = useState<"radial" | "force">("radial");
 
   const setParam = useCallback(
     (patch: Record<string, string>) => {
@@ -179,6 +181,26 @@ export function ExplorerClient({ initialSeed, initialId }: { initialSeed: SeedKi
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
+          <span className="u-eyebrow mr-1">View</span>
+          {(
+            [
+              { value: "radial", label: "radial" },
+              { value: "force", label: "force" },
+            ] as const
+          ).map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              className="chip"
+              data-active={view === option.value}
+              onClick={() => setView(option.value)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+
+        <div className={`flex-wrap items-center gap-1.5 ${view === "force" ? "flex" : "hidden"}`}>
           <span className="u-eyebrow mr-1">Colour by</span>
           {(
             [
@@ -282,12 +304,16 @@ export function ExplorerClient({ initialSeed, initialId }: { initialSeed: SeedKi
                 </span>
               </div>
             ) : payload && payload.nodes.length > 0 ? (
-              <ForceGraph
-                payload={payload}
-                onSelect={setSelected}
-                selectedId={selected?.id ?? null}
-                colorMode={colorMode}
-              />
+              view === "radial" ? (
+                <RadialTree payload={payload} onSelect={setSelected} selectedId={selected?.id ?? null} />
+              ) : (
+                <ForceGraph
+                  payload={payload}
+                  onSelect={setSelected}
+                  selectedId={selected?.id ?? null}
+                  colorMode={colorMode}
+                />
+              )
             ) : (
               <EmptyState
                 title="Nothing connects to that"
@@ -344,26 +370,31 @@ export function ExplorerClient({ initialSeed, initialId }: { initialSeed: SeedKi
               <>
                 <p className="u-eyebrow mb-2">Inspector</p>
                 <p className="text-[12.5px] leading-relaxed text-fg-subtle">
-                  Hover any node to trace its route back to the centre — everything off the path dims. Click
-                  to inspect, drag to pull a node around, drag the background to pan, scroll to zoom.
+                  {view === "radial"
+                    ? "Radius is hop distance — the centre is what you asked about, and every ring outward is one more dependency hop. Hover any node to light the route back to the centre."
+                    : "A physics layout of the same subgraph. Hover to trace the route back to the centre, drag to pull a node around, drag the background to pan, scroll to zoom."}
                 </p>
                 <div className="mt-4 space-y-2 border-t border-rule pt-3 text-[11.5px] text-fg-subtle">
                   <p>
+                    <span className="u-mono text-fg-muted">Two projections</span> of one subgraph. Radial
+                    makes depth legible because radius <em>is</em> hop count; force shows how tangled things
+                    are but puts nodes wherever the springs settle.
+                  </p>
+                  <p>
                     <span className="u-mono text-fg-muted">Colour</span> is distance from where you started —
-                    light at the surface, dark at the bedrock, the same ramp the dependency chains use.
+                    light at the surface, dark at the bedrock, the same ramp every dependency chain in the app
+                    uses.
                   </p>
                   <p>
-                    <span className="u-mono text-fg-muted">Dashed edges</span> are advisories, service calls
-                    and name-similarity links. Solid ones are structural.
-                  </p>
-                  <p>
-                    <span className="u-mono text-fg-muted">Size</span> tracks how many relationships touch a
-                    node, so the chokepoints are the big ones.
+                    {view === "radial"
+                      ? "The tree is the breadth-first spanning tree of the subgraph, so each node shows the one canonical route the blast-radius query would report."
+                      : "Dashed edges are advisories, service calls and name-similarity links; solid ones are structural. Size tracks how many relationships touch a node."}
                   </p>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-1.5 border-t border-rule pt-3">
-                  <Tag tone="quiet">canvas</Tag>
-                  <Tag tone="quiet">d3-force</Tag>
+                  <Tag tone="quiet">{view === "radial" ? "svg" : "canvas"}</Tag>
+                  <Tag tone="quiet">{view === "radial" ? "d3-hierarchy" : "d3-force"}</Tag>
+                  <Tag tone="quiet">{payload?.nodes.length ?? 0} nodes</Tag>
                   <Tag tone="quiet">{payload?.edges.length ?? 0} edges</Tag>
                 </div>
               </>

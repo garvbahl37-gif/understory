@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 
+import { GraphPreview } from "@/components/graph/GraphPreview";
 import { DepthHistogram } from "@/components/ui/charts";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { MissingEntity } from "@/components/ui/MissingEntity";
@@ -145,6 +146,19 @@ async function BlastRadius({ advisoryId }: { advisoryId: string }) {
           )}
         </Panel>
       </div>
+
+      <Section
+        title="The blast radius, drawn"
+        hint="The centre is the advisory. Every ring outward is one more dependency hop, and the outermost nodes are the services that end up carrying it."
+      >
+        <GraphPreview
+          seed="advisory"
+          id={advisoryId}
+          depth={4}
+          caption="Breadth-first spanning tree of the advisory's neighbourhood, assembled from the same edge-list queries the explorer runs."
+          exploreHref={`/explorer?seed=advisory&id=${encodeURIComponent(advisoryId)}&depth=4`}
+        />
+      </Section>
 
       <Section
         title={`Affected services — ${plainNumber(rows.length)}`}

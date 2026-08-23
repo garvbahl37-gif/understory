@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 
+import { GraphPreview } from "@/components/graph/GraphPreview";
 import { DepthHistogram } from "@/components/ui/charts";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { MissingEntity } from "@/components/ui/MissingEntity";
@@ -374,6 +375,19 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
       <Suspense fallback={<StatSkeleton />}>
         <Footprint slug={service.slug} name={service.name} />
       </Suspense>
+
+      <Section
+        title="Everything this service stands on"
+        hint="Radius is hop distance from the service's own manifest. Three hops out is already code nobody here chose."
+      >
+        <GraphPreview
+          seed="service"
+          id={service.slug}
+          depth={3}
+          caption={`The resolved dependency closure of ${service.name}, three hops deep.`}
+          exploreHref={`/explorer?seed=service&id=${encodeURIComponent(service.slug)}&depth=3`}
+        />
+      </Section>
 
       <Suspense fallback={<TableSkeleton rows={8} cols={5} />}>
         <Dependencies slug={service.slug} />

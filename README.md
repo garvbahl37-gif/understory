@@ -7,7 +7,7 @@
 An open-source supply chain risk console backed by a graph database.
 Built for the Wexa AI take-home, on [CognoDB](https://console.cognodb.com) over Bolt + openCypher.
 
-**[▶ Live demo](https://understory-graph.vercel.app)** · [Why a graph database?](#why-a-graph-database) · [Data model](#data-model) · [The queries](#the-queries-that-matter) · [What CognoDB does differently](#what-cognodb-does-differently)
+**[▶ Live demo](https://understory-graph.vercel.app)** · [Why a graph database?](#why-a-graph-database) · [Data model](#data-model) · [The queries](#the-queries-that-matter) · [What CognoDB does differently](#what-cognodb-does-differently) · [Design record](docs/DESIGN.md)
 
 </div>
 
@@ -264,11 +264,17 @@ Real npm chains, four levels deep: `Checkout API → express → qs → side-cha
 
 ![Service detail](docs/screenshots/service.png)
 
-#### Explorer — nodes coloured by distance from wherever you started
+#### Explorer — radius _is_ hop distance
 
-Hovering traces the route back to the centre and dims everything off it. Same depth ramp as the chains, so the picture and the tables agree.
+The centre is what you asked about; every ring outward is one more dependency hop. Hovering lights the route back to the centre and dims everything off it. A force view of the same subgraph is one click away.
 
 ![Explorer](docs/screenshots/explorer.png)
+
+#### The blast radius, drawn
+
+The same picture, embedded on the advisory page: the advisory at the centre, the affected releases on the inner rings, and the services carrying it on the outside.
+
+![Blast radius diagram](docs/screenshots/radial.png)
 
 #### Structural risk — the problems that are true before anything is disclosed
 
@@ -428,12 +434,15 @@ src/
 **Depth is the organising idea**, because depth is the question the product answers. It gets its own single-hue sequential ramp and nothing else is allowed to use it.
 
 - **Ground** is cool graphite in three steps, with a fine grain and a barely-there overhead gradient so it reads as material rather than as a flat fill.
-- **Every dependency path** is drawn as an indented monospace tree with a depth gutter — the notation engineers already read in `npm ls`, made legible at a glance to someone who has never opened a lockfile. The graph explorer uses the same ramp to colour nodes by hops from wherever you started, which turns a hairball into a picture with a readable gradient.
+- **Every dependency path** is drawn as an indented monospace tree with a depth gutter — the notation engineers already read in `npm ls`, made legible at a glance to someone who has never opened a lockfile.
+- **The explorer offers two projections of the same subgraph.** A force layout answers "what is tangled up with what", but the physics puts a node wherever the springs settle, so distance on screen means nothing. The default **radial** view makes radius _be_ hop distance: the thing you asked about at the centre, one ring per dependency hop, drawing the breadth-first spanning tree so each node shows the one canonical route the blast-radius query would report. Both share the depth ramp, so switching is a change of projection, not of language.
 - **Indigo** is the one interactive family: links, selection, primary actions.
 - **Severity** is a reserved status channel that never means anything else. The four steps were tuned with a colour-vision validator rather than by eye — the worst adjacent pair separates by ΔE 15.4 under normal vision and 10.9 under deuteranopia, severity is _additionally_ encoded by lightness, and every severity mark ships with its label, so colour alone never carries meaning.
 - **Type** is Fraunces for the name and section titles, IBM Plex Sans for the interface, IBM Plex Mono for every identifier, version and number.
 
 Checked rather than assumed: the depth ramp is strictly monotonic in lightness, and every text token clears 4.5:1 against all three surfaces (the darkest depth steps are used only for 3px bands that carry no text).
+
+**[→ Full design record](docs/DESIGN.md)** — the palette with its measured contrast table, the severity ramp's colour-vision scores, why the radial projection exists, and the checks that were run rather than assumed.
 
 Loading, empty and error states are designed rather than defaulted — skeletons match the shape of what they replace, and "nothing we run can reach this" is written as an answer, not an absence. Filters live in the URL so every view is shareable, overlays are portalled out of the masthead so `backdrop-filter` cannot capture them, focus is always visible, and `prefers-reduced-motion` is respected — including by the force layout, which runs to completion in one tick instead of animating.
 
