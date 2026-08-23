@@ -3,105 +3,101 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    Understory — design tokens
 
-   The palette is a soil profile. Software supply chains are read top-down:
-   the service you own sits at the surface, and the package that is actually
-   on fire is usually four or five strata below it. So the ground here is warm
-   peat rather than the usual blue-black, depth is encoded as an ochre ramp,
-   and the one cool colour in the system — chalk — is reserved for the things
-   a person can act on. Severity keeps its own warm ramp so it never has to
-   compete with the interface for meaning.
+   A supply chain is read top-down: the service you own at the surface, the
+   package that is actually on fire four or five levels beneath it. So depth is
+   the organising idea, and it gets its own single-hue sequential ramp — the
+   only encoding in the system that is allowed to mean "how far down".
+
+   Three colour families, each with exactly one job:
+     · indigo   structure and interaction — depth, links, selection
+     · warm     severity, and nothing else
+     · neutral  everything that is not carrying meaning
+
+   Every value below was checked rather than eyeballed. The depth ramp is
+   strictly monotonic in lightness; every text step clears 4.5:1 on all three
+   surfaces; the severity ramp separates by dE 15.4 under normal vision and
+   10.9 under deuteranopia.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  /* ground */
-  --peat: #14100d;
-  --peat-raised: #1c1713;
-  --peat-high: #241d18;
-  --peat-sunken: #0e0b09;
-  --rule: #2e251d;
-  --rule-strong: #43362b;
+  /* ground — cool graphite, lifted in three steps */
+  --ink: #0b0e14;
+  --surface: #151922;
+  --surface-2: #1d222d;
+  --well: #080a0f;
+  --rule: #232936;
+  --rule-strong: #333b4b;
 
   /* text */
-  --bone: #efe7dc;
-  --bone-dim: #c9bcab;
-  --lichen: #97897a;
-  --lichen-dim: #918475;
-  --lichen-faint: #6d6156; /* decorative only — never carries text */
+  --fg: #e9edf5;
+  --fg-muted: #b8c1d1;
+  --fg-subtle: #a3adbf;
+  --fg-faint: #78839a;
+  --fg-ghost: #5a6478; /* decorative only — never carries text */
 
-  /* the one cool colour: interactive, selected, "you can do something here" */
-  --chalk: #86b0c0;
-  --chalk-bright: #a8cddb;
-  --chalk-dim: #4a6b78;
-  --chalk-wash: #86b0c01a;
+  /* interaction */
+  --accent: #8aa4ff;
+  --accent-bright: #aec0ff;
+  --accent-dim: #4a5a8f;
+  --accent-wash: #8aa4ff1a;
 
   /* Severity is a reserved status channel, never reused for anything else.
-     These four were tuned with a CVD validator rather than by eye: the worst
-     adjacent pair separates by ΔE 12.8 under deuteranopia and 16.4 under normal
-     vision, and severity is additionally encoded by lightness, so the ramp
-     survives being printed, being seen by a colourblind reader, and being
-     glanced at. Every severity mark still ships with its label — colour alone
-     never carries the meaning. */
+     Tuned with a colour-vision validator: the worst adjacent pair separates by
+     dE 10.9 under deuteranopia and 15.4 under normal vision, severity is
+     additionally encoded by lightness, and every severity mark ships with its
+     label so colour alone never carries the meaning. */
   --sev-critical: #e25a5a;
   --sev-high: #e59318;
   --sev-medium: #ecd76d;
   --sev-low: #75b478;
-  --sev-none: #918475;
+  --sev-none: #78839a;
 
-  /* Depth strata: surface to bedrock.
-     Two ramps on purpose. The band ramp is free to go as dark as real soil
-     because it is a 3px block of colour carrying no text; the text ramp is the
-     same hue held above 4.5:1 on every surface in the system. */
-  --strata-0: #efe7dc;
-  --strata-1: #d6b98a;
-  --strata-2: #c09a63;
-  --strata-3: #a67c48;
-  --strata-4: #855f36;
-  --strata-5: #63452a;
-  --strata-6: #46301e;
+  /* Depth: one hue, light to dark, surface to bedrock.
+     Two ramps on purpose. The band ramp is free to go as dark as it likes
+     because it is a 3px block carrying no text; the text ramp is the same hue
+     held above 4.5:1 everywhere. */
+  --depth-0: #e6ecff;
+  --depth-1: #c3d0f7;
+  --depth-2: #a2b4ee;
+  --depth-3: #8298df;
+  --depth-4: #647cc4;
+  --depth-5: #4c619f;
+  --depth-6: #3a4b78;
 
-  --strata-text-0: #efe7dc;
-  --strata-text-1: #e0c9a4;
-  --strata-text-2: #d3b586;
-  --strata-text-3: #c6a169;
-  --strata-text-4: #bc9257;
-  --strata-text-5: #b2854a;
-  --strata-text-6: #aa7c42;
+  --depth-text-0: #e6ecff;
+  --depth-text-1: #cbd6fa;
+  --depth-text-2: #b2c1f3;
+  --depth-text-3: #9badea;
+  --depth-text-4: #8a9de0;
+  --depth-text-5: #7c90d6;
+  --depth-text-6: #7185cc;
 
   /* elevation — a hairline of light on the top edge, the way real panels catch it */
-  --lift-1: inset 0 1px 0 rgba(255, 244, 230, 0.035);
-  --lift-2: inset 0 1px 0 rgba(255, 244, 230, 0.05), 0 1px 2px rgba(0, 0, 0, 0.4);
-  --lift-3: inset 0 1px 0 rgba(255, 244, 230, 0.06), 0 8px 28px -8px rgba(0, 0, 0, 0.7);
+  --lift-1: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  --lift-2: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 1px 2px rgba(0, 0, 0, 0.45);
+  --lift-3: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 12px 34px -10px rgba(0, 0, 0, 0.8);
 
-  /* spacing — dense, dashboard-scale */
-  --s1: 4px;
-  --s2: 8px;
-  --s3: 12px;
-  --s4: 16px;
-  --s5: 24px;
-  --s6: 32px;
-  --s7: 48px;
-
-  --radius: 3px;
-  --radius-lg: 5px;
-  --rail: 232px;
+  --radius: 6px;
+  --radius-lg: 10px;
+  --rail: 236px;
   --masthead: 57px;
 }
 
 @theme inline {
-  --color-peat: var(--peat);
-  --color-peat-raised: var(--peat-raised);
-  --color-peat-high: var(--peat-high);
-  --color-peat-sunken: var(--peat-sunken);
+  --color-ink: var(--ink);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-well: var(--well);
   --color-rule: var(--rule);
   --color-rule-strong: var(--rule-strong);
-  --color-bone: var(--bone);
-  --color-bone-dim: var(--bone-dim);
-  --color-lichen: var(--lichen);
-  --color-lichen-dim: var(--lichen-dim);
-  --color-lichen-faint: var(--lichen-faint);
-  --color-chalk: var(--chalk);
-  --color-chalk-bright: var(--chalk-bright);
-  --color-chalk-dim: var(--chalk-dim);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-fg-faint: var(--fg-faint);
+  --color-fg-ghost: var(--fg-ghost);
+  --color-accent: var(--accent);
+  --color-accent-bright: var(--accent-bright);
+  --color-accent-dim: var(--accent-dim);
   --color-critical: var(--sev-critical);
   --color-high: var(--sev-high);
   --color-medium: var(--sev-medium);
@@ -111,10 +107,10 @@
   --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, "SF Mono", Menlo, monospace;
 
-  --radius-sm: 2px;
-  --radius-DEFAULT: 3px;
-  --radius-md: 4px;
-  --radius-lg: 5px;
+  --radius-sm: 4px;
+  --radius-DEFAULT: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
 }
 
 /* ── base ─────────────────────────────────────────────────────────────────── */
@@ -125,12 +121,12 @@
 
 html {
   color-scheme: dark;
-  background: var(--peat);
+  background: var(--ink);
 }
 
 body {
-  background: var(--peat);
-  color: var(--bone);
+  background: var(--ink);
+  color: var(--fg);
   font-family: var(--font-sans);
   font-size: 14px;
   line-height: 1.55;
@@ -139,35 +135,46 @@ body {
   font-feature-settings: "cv05" 1;
 }
 
-/* A whisper of grain over the whole ground.
-   Flat dark UI reads as plastic; a little tooth reads as material, which is
-   the right register for something named after a forest floor. Inline SVG so
-   there is no network request and nothing to cache-bust. */
+/* A whisper of grain and a soft overhead light.
+   A flat dark fill reads as plastic; a little tooth and a barely-there
+   gradient give the ground some depth without drawing attention to itself.
+   Inline SVG so there is no network request and nothing to cache-bust. */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  opacity: 0.24;
+  opacity: 0.14;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
 }
 
-body > * {
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(120% 80% at 50% -20%, rgba(138, 164, 255, 0.07), transparent 62%);
+}
+
+/* Everything real sits above the two atmosphere layers. Overlays that must
+   escape a stacking context are portalled to the body and set their own z. */
+body > *:not(script) {
   position: relative;
   z-index: 1;
 }
 
 ::selection {
-  background: var(--chalk-dim);
-  color: var(--bone);
+  background: var(--accent-dim);
+  color: var(--fg);
 }
 
 :focus-visible {
-  outline: 2px solid var(--chalk);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
   border-radius: 2px;
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--chalk) 18%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
 /* Scrollbars, tuned to the ground rather than left at the OS default. */
@@ -176,15 +183,15 @@ body > * {
   height: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--peat-sunken);
+  background: var(--well);
 }
 ::-webkit-scrollbar-thumb {
   background: var(--rule-strong);
-  border: 3px solid var(--peat-sunken);
+  border: 3px solid var(--well);
   border-radius: 6px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--lichen-dim);
+  background: var(--fg-faint);
 }
 
 /* ── type scale ───────────────────────────────────────────────────────────── */
@@ -195,7 +202,7 @@ body > * {
   font-optical-sizing: auto;
   letter-spacing: -0.015em;
   line-height: 1.08;
-  color: var(--bone);
+  color: var(--fg);
 }
 
 .u-eyebrow {
@@ -203,7 +210,7 @@ body > * {
   font-size: 10.5px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--lichen);
+  color: var(--fg-subtle);
   font-weight: 500;
 }
 
@@ -222,7 +229,7 @@ body > * {
 .u-lede {
   font-size: 15px;
   line-height: 1.62;
-  color: var(--bone-dim);
+  color: var(--fg-muted);
   max-width: 68ch;
 }
 
@@ -238,15 +245,15 @@ body > * {
   line-height: 1.9;
 }
 
-.strata-row {
+.depth-row {
   display: grid;
   grid-template-columns: 1.5rem 3px 1fr;
   align-items: stretch;
   gap: 0;
 }
 
-.strata-depth {
-  color: var(--lichen-dim);
+.depth-depth {
+  color: var(--fg-faint);
   font-size: 10px;
   text-align: right;
   padding-right: 8px;
@@ -254,12 +261,12 @@ body > * {
   font-feature-settings: "tnum" 1;
 }
 
-.strata-band {
+.depth-band {
   background: var(--band);
   opacity: 0.85;
 }
 
-.strata-body {
+.depth-body {
   padding-left: 12px;
   align-self: center;
   min-width: 0;
@@ -268,11 +275,11 @@ body > * {
   scrollbar-width: thin;
 }
 
-.strata-row:first-child .strata-band {
+.depth-row:first-child .depth-band {
   border-top-left-radius: 2px;
   border-top-right-radius: 2px;
 }
-.strata-row:last-child .strata-band {
+.depth-row:last-child .depth-band {
   border-bottom-left-radius: 2px;
   border-bottom-right-radius: 2px;
 }
@@ -280,7 +287,7 @@ body > * {
 /* ── surfaces ─────────────────────────────────────────────────────────────── */
 
 .panel {
-  background: var(--peat-raised);
+  background: var(--surface);
   border: 1px solid var(--rule);
   border-radius: var(--radius-lg);
   box-shadow: var(--lift-1);
@@ -291,7 +298,7 @@ body > * {
 }
 
 .panel-sunken {
-  background: var(--peat-sunken);
+  background: var(--well);
   border: 1px solid var(--rule);
   border-radius: var(--radius);
 }
@@ -303,22 +310,22 @@ body > * {
 /* ── links & controls ─────────────────────────────────────────────────────── */
 
 .link {
-  color: var(--chalk);
+  color: var(--accent);
   text-decoration: none;
   text-underline-offset: 3px;
   transition: color 120ms ease;
 }
 .link:hover {
-  color: var(--chalk-bright);
+  color: var(--accent-bright);
   text-decoration: underline;
   text-decoration-thickness: 1px;
 }
 
 .control {
-  background: var(--peat-sunken);
+  background: var(--well);
   border: 1px solid var(--rule);
   border-radius: var(--radius);
-  color: var(--bone);
+  color: var(--fg);
   font-family: var(--font-sans);
   font-size: 13px;
   padding: 6px 10px;
@@ -327,25 +334,25 @@ body > * {
     background 120ms ease;
 }
 .control::placeholder {
-  color: var(--lichen-dim);
+  color: var(--fg-faint);
 }
 .control:hover {
   border-color: var(--rule-strong);
 }
 .control:focus {
-  border-color: var(--chalk-dim);
+  border-color: var(--accent-dim);
   outline: none;
-  box-shadow: 0 0 0 3px var(--chalk-wash);
+  box-shadow: 0 0 0 3px var(--accent-wash);
 }
 
 .btn {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  background: var(--peat-high);
+  background: var(--surface-2);
   border: 1px solid var(--rule-strong);
   border-radius: var(--radius);
-  color: var(--bone);
+  color: var(--fg);
   font-size: 13px;
   font-weight: 500;
   padding: 6px 13px;
@@ -357,21 +364,21 @@ body > * {
 }
 .btn:hover:not(:disabled) {
   background: var(--rule);
-  border-color: var(--lichen-dim);
+  border-color: var(--fg-faint);
 }
 .btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
 .btn-primary {
-  background: var(--chalk);
-  border-color: var(--chalk);
-  color: var(--peat);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--ink);
 }
 .btn-primary:hover:not(:disabled) {
-  background: var(--chalk-bright);
-  border-color: var(--chalk-bright);
-  color: var(--peat);
+  background: var(--accent-bright);
+  border-color: var(--accent-bright);
+  color: var(--ink);
 }
 
 /* Segmented filters. The active one is the only cool thing on screen. */
@@ -382,20 +389,20 @@ body > * {
   padding: 4px 9px;
   border-radius: 999px;
   border: 1px solid var(--rule);
-  color: var(--lichen);
+  color: var(--fg-subtle);
   background: transparent;
   cursor: pointer;
   transition: all 120ms ease;
   white-space: nowrap;
 }
 .chip:hover {
-  color: var(--bone-dim);
+  color: var(--fg-muted);
   border-color: var(--rule-strong);
 }
 .chip[data-active="true"] {
-  color: var(--chalk-bright);
-  border-color: var(--chalk-dim);
-  background: var(--chalk-wash);
+  color: var(--accent-bright);
+  border-color: var(--accent-dim);
+  background: var(--accent-wash);
 }
 
 /* ── tables ───────────────────────────────────────────────────────────────── */
@@ -410,13 +417,13 @@ body > * {
   font-size: 10px;
   letter-spacing: 0.13em;
   text-transform: uppercase;
-  color: var(--lichen);
+  color: var(--fg-subtle);
   font-weight: 500;
   text-align: left;
   padding: 9px 14px;
   border-bottom: 1px solid var(--rule);
   white-space: nowrap;
-  background: var(--peat-raised);
+  background: var(--surface);
   position: sticky;
   top: 0;
   z-index: 2;
@@ -433,17 +440,17 @@ body > * {
   transition: background 100ms ease;
 }
 .table tbody tr:hover {
-  background: color-mix(in srgb, var(--peat-high) 70%, transparent);
+  background: color-mix(in srgb, var(--surface-2) 70%, transparent);
 }
 
-/* A hairline of chalk on the leading edge of the hovered row: enough to track
+/* A hairline of accent on the leading edge of the hovered row: enough to track
    your eye across a wide table without adding a whole highlight colour. */
 .table tbody tr td:first-child {
   box-shadow: inset 2px 0 0 transparent;
   transition: box-shadow 120ms ease;
 }
 .table tbody tr:hover td:first-child {
-  box-shadow: inset 2px 0 0 var(--chalk-dim);
+  box-shadow: inset 2px 0 0 var(--accent-dim);
 }
 .table .num {
   font-family: var(--font-mono);

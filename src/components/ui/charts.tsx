@@ -68,10 +68,10 @@ export function SeverityComposition({
               className="inline-block h-[7px] w-[7px] shrink-0 rounded-sm"
               style={{ background: SEVERITY_COLOR[slice.severity] }}
             />
-            <span className="u-mono text-[10.5px] uppercase tracking-[0.1em] text-lichen">
+            <span className="u-mono text-[10.5px] uppercase tracking-[0.1em] text-fg-subtle">
               {slice.severity.toLowerCase()}
             </span>
-            <span className="u-num text-[12px] text-bone">{slice.advisories}</span>
+            <span className="u-num text-[12px] text-fg">{slice.advisories}</span>
           </li>
         ))}
       </ul>
@@ -106,7 +106,7 @@ export function DepthHistogram({
               onMouseLeave={() => setHover(null)}
             >
               {active && bin.count > 0 ? (
-                <span className="u-mono absolute -top-1 z-10 whitespace-nowrap rounded border border-rule bg-[var(--peat-high)] px-1.5 py-0.5 text-[10px] text-bone shadow-lg">
+                <span className="u-mono absolute -top-1 z-10 whitespace-nowrap rounded border border-rule bg-[var(--surface-2)] px-1.5 py-0.5 text-[10px] text-fg shadow-lg">
                   {plainNumber(bin.count)} at {bin.depth} {bin.depth === 1 ? "hop" : "hops"}
                 </span>
               ) : null}
@@ -114,7 +114,7 @@ export function DepthHistogram({
                 className="w-full transition-opacity duration-150"
                 style={{
                   height,
-                  background: `var(--strata-${Math.min(6, bin.depth)})`,
+                  background: `var(--depth-${Math.min(6, bin.depth)})`,
                   borderTopLeftRadius: 4,
                   borderTopRightRadius: 4,
                   opacity: hover === null || active ? 1 : 0.4,
@@ -130,14 +130,14 @@ export function DepthHistogram({
           <span
             key={bin.depth}
             className="u-num flex-1 text-center text-[10px]"
-            style={{ color: hover === bin.depth ? "var(--bone)" : "var(--lichen-faint)" }}
+            style={{ color: hover === bin.depth ? "var(--fg)" : "var(--fg-ghost)" }}
           >
             {bin.depth}
           </span>
         ))}
       </div>
 
-      <figcaption className="mt-2 text-[11.5px] text-lichen">
+      <figcaption className="mt-2 text-[11.5px] text-fg-subtle">
         {caption ?? "Hops between a service's manifest and the vulnerable release."}
       </figcaption>
     </figure>

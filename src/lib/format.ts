@@ -55,15 +55,15 @@ export const TIER_LABEL: Record<ServiceTier, string> = {
  * Soil-profile ramp. Depth 6 and beyond all read as bedrock.
  *
  * Two ramps, because a 3px block of colour and a line of 12px text have very
- * different contrast requirements. `strataColor` is for bands and bars;
- * `strataTextColor` is the same hue held above 4.5:1 on every surface.
+ * different contrast requirements. `depthColor` is for bands and bars;
+ * `depthTextColor` is the same hue held above 4.5:1 on every surface.
  */
-export function strataColor(depth: number): string {
-  return `var(--strata-${Math.max(0, Math.min(6, depth))})`;
+export function depthColor(depth: number): string {
+  return `var(--depth-${Math.max(0, Math.min(6, depth))})`;
 }
 
-export function strataTextColor(depth: number): string {
-  return `var(--strata-text-${Math.max(0, Math.min(6, depth))})`;
+export function depthTextColor(depth: number): string {
+  return `var(--depth-text-${Math.max(0, Math.min(6, depth))})`;
 }
 
 const COMPACT = new Intl.NumberFormat("en-GB", { notation: "compact", maximumFractionDigits: 1 });

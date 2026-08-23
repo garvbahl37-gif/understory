@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { packageHref, parseVersionKey, strataColor, strataTextColor } from "@/lib/format";
+import { packageHref, parseVersionKey, depthColor, depthTextColor } from "@/lib/format";
 
 /**
  * The signature device.
@@ -28,22 +28,22 @@ export function Strata({ rows, className = "" }: { rows: StratumRow[]; className
       {rows.map((row, index) => {
         const connector = row.depth === 0 ? "" : `${"   ".repeat(Math.max(0, row.depth - 1))}└─ `;
         const body = (
-          <span className={row.flagged ? "text-critical" : "text-bone-dim"}>
-            <span className="text-lichen-dim">{connector}</span>
+          <span className={row.flagged ? "text-critical" : "text-fg-muted"}>
+            <span className="text-fg-faint">{connector}</span>
             {row.label}
           </span>
         );
         return (
-          <div className="strata-row" role="listitem" key={`${index}-${row.depth}`}>
-            <span className="strata-depth" aria-hidden>
+          <div className="depth-row" role="listitem" key={`${index}-${row.depth}`}>
+            <span className="depth-depth" aria-hidden>
               {row.depth}
             </span>
             <span
-              className="strata-band"
-              style={{ ["--band" as string]: strataColor(row.depth) }}
+              className="depth-band"
+              style={{ ["--band" as string]: depthColor(row.depth) }}
               aria-hidden
             />
-            <span className="strata-body flex items-baseline justify-between gap-4">
+            <span className="depth-body flex items-baseline justify-between gap-4">
               {row.href ? (
                 <Link href={row.href} className="link truncate">
                   {body}
@@ -52,7 +52,7 @@ export function Strata({ rows, className = "" }: { rows: StratumRow[]; className
                 body
               )}
               {row.note ? (
-                <span className="shrink-0 whitespace-nowrap text-[10.5px] uppercase tracking-[0.1em] text-lichen-dim">
+                <span className="shrink-0 whitespace-nowrap text-[10.5px] uppercase tracking-[0.1em] text-fg-faint">
                   {row.note}
                 </span>
               ) : null}
@@ -84,7 +84,7 @@ export function chainToStrata(
       label: (
         <>
           {parsed.packageName}
-          <span className="text-lichen-dim">@{parsed.version}</span>
+          <span className="text-fg-faint">@{parsed.version}</span>
         </>
       ),
       href: packageHref(parsed.packageKey),
@@ -99,13 +99,13 @@ export function chainToStrata(
 /** A one-line version of the same idea, for dense tables. */
 export function InlineChain({ chain }: { chain: string[] }) {
   return (
-    <span className="u-mono text-[11.5px] text-lichen">
+    <span className="u-mono text-[11.5px] text-fg-subtle">
       {chain.map((key, index) => {
         const parsed = parseVersionKey(key);
         return (
           <span key={key}>
-            {index > 0 ? <span className="text-lichen-dim"> › </span> : null}
-            <span style={{ color: strataTextColor(index + 1) }}>{parsed.packageName}</span>
+            {index > 0 ? <span className="text-fg-faint"> › </span> : null}
+            <span style={{ color: depthTextColor(index + 1) }}>{parsed.packageName}</span>
           </span>
         );
       })}

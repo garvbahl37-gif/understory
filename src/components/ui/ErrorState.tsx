@@ -30,7 +30,7 @@ export function ErrorState({ error, retryHref }: { error: DbErrorShape; retryHre
       </div>
 
       <div className="px-5 py-5">
-        <p className="text-[15px] text-bone">{error.message}</p>
+        <p className="text-[15px] text-fg">{error.message}</p>
         <p className="u-lede mt-2.5 text-[13px]">{REMEDIATION[error.kind] ?? REMEDIATION.unknown}</p>
 
         <div className="mt-5 flex flex-wrap items-center gap-2.5">
@@ -46,10 +46,10 @@ export function ErrorState({ error, retryHref }: { error: DbErrorShape; retryHre
 
         {error.detail ? (
           <details className="mt-5 border-t border-rule pt-4">
-            <summary className="u-mono cursor-pointer text-[11px] uppercase tracking-[0.13em] text-lichen hover:text-bone-dim">
+            <summary className="u-mono cursor-pointer text-[11px] uppercase tracking-[0.13em] text-fg-subtle hover:text-fg-muted">
               Technical detail
             </summary>
-            <pre className="u-mono mt-3 overflow-x-auto whitespace-pre-wrap break-words rounded bg-[var(--peat-sunken)] p-3 text-[11.5px] leading-relaxed text-lichen">
+            <pre className="u-mono mt-3 overflow-x-auto whitespace-pre-wrap break-words rounded bg-[var(--well)] p-3 text-[11.5px] leading-relaxed text-fg-subtle">
               {error.code ? `${error.code}\n\n` : ""}
               {error.detail}
             </pre>

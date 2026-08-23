@@ -135,9 +135,7 @@ export function FilterBar({
       ) : null}
 
       {pending ? (
-        <span className="breathe u-mono text-[10px] uppercase tracking-[0.12em] text-lichen-dim">
-          updating
-        </span>
+        <span className="breathe u-mono text-[10px] uppercase tracking-[0.12em] text-fg-faint">updating</span>
       ) : null}
     </div>
   );

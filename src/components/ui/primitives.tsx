@@ -51,7 +51,7 @@ export function Section({
       <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="u-eyebrow">{title}</h2>
-          {hint ? <p className="mt-1.5 max-w-[70ch] text-[13px] text-lichen">{hint}</p> : null}
+          {hint ? <p className="mt-1.5 max-w-[70ch] text-[13px] text-fg-subtle">{hint}</p> : null}
         </div>
         {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
       </div>
@@ -84,7 +84,7 @@ export function Stat({
   label: string;
   value: ReactNode;
   sub?: ReactNode;
-  tone?: "neutral" | "critical" | "high" | "chalk";
+  tone?: "neutral" | "critical" | "high" | "accent";
   href?: string;
 }) {
   const color =
@@ -92,9 +92,9 @@ export function Stat({
       ? "var(--sev-critical)"
       : tone === "high"
         ? "var(--sev-high)"
-        : tone === "chalk"
-          ? "var(--chalk)"
-          : "var(--bone)";
+        : tone === "accent"
+          ? "var(--accent)"
+          : "var(--fg)";
 
   const body = (
     <>
@@ -102,7 +102,7 @@ export function Stat({
       <p className="u-num mt-2 text-[27px] leading-none" style={{ color }}>
         {value}
       </p>
-      {sub ? <p className="mt-2 text-[12px] leading-snug text-lichen">{sub}</p> : null}
+      {sub ? <p className="mt-2 text-[12px] leading-snug text-fg-subtle">{sub}</p> : null}
     </>
   );
 
@@ -116,6 +116,14 @@ export function Stat({
   );
 }
 
+/** Four characters, not a blind slice — "MEDI" is not a word. */
+const SEVERITY_SHORT: Record<Severity, string> = {
+  CRITICAL: "CRIT",
+  HIGH: "HIGH",
+  MEDIUM: "MED",
+  LOW: "LOW",
+};
+
 export function SeverityTag({ severity, compact = false }: { severity: Severity; compact?: boolean }) {
   const color = SEVERITY_COLOR[severity];
   return (
@@ -128,7 +136,7 @@ export function SeverityTag({ severity, compact = false }: { severity: Severity;
       }}
     >
       <span className="inline-block h-[5px] w-[5px] rounded-full" style={{ background: color }} />
-      {compact ? severity.slice(0, 4) : severity}
+      {compact ? SEVERITY_SHORT[severity] : severity}
     </span>
   );
 }
@@ -139,14 +147,14 @@ export function Tag({
   title,
 }: {
   children: ReactNode;
-  tone?: "neutral" | "chalk" | "warn" | "quiet";
+  tone?: "neutral" | "accent" | "warn" | "quiet";
   title?: string;
 }) {
   const styles: Record<string, string> = {
-    neutral: "border-rule text-bone-dim",
-    chalk: "border-chalk-dim text-chalk-bright bg-[var(--chalk-wash)]",
+    neutral: "border-rule text-fg-muted",
+    accent: "border-accent-dim text-accent-bright bg-[var(--accent-wash)]",
     warn: "border-[color-mix(in_srgb,var(--sev-high)_40%,transparent)] text-high",
-    quiet: "border-transparent text-lichen-dim",
+    quiet: "border-transparent text-fg-faint",
   };
   return (
     <span
@@ -161,10 +169,10 @@ export function Tag({
 export function TierMark({ tier }: { tier: string }) {
   const map: Record<string, { label: string; color: string }> = {
     critical: { label: "Tier 1", color: "var(--sev-critical)" },
-    standard: { label: "Tier 2", color: "var(--lichen)" },
-    internal: { label: "Internal", color: "var(--lichen-dim)" },
+    standard: { label: "Tier 2", color: "var(--fg-subtle)" },
+    internal: { label: "Internal", color: "var(--fg-faint)" },
   };
-  const entry = map[tier] ?? { label: tier, color: "var(--lichen)" };
+  const entry = map[tier] ?? { label: tier, color: "var(--fg-subtle)" };
   return (
     <span
       className="u-mono inline-flex items-center gap-1.5 text-[10.5px] uppercase tracking-[0.1em]"
@@ -177,12 +185,12 @@ export function TierMark({ tier }: { tier: string }) {
 }
 
 /** A horizontal bar chart cell — reads faster than a number in a wide table. */
-export function Meter({ value, max, tone = "var(--chalk)" }: { value: number; max: number; tone?: string }) {
+export function Meter({ value, max, tone = "var(--accent)" }: { value: number; max: number; tone?: string }) {
   const pct = max <= 0 ? 0 : Math.max(2, Math.round((value / max) * 100));
   return (
     <span className="inline-flex items-center gap-2">
-      <span className="u-num w-8 text-right text-[12px] text-bone">{value}</span>
-      <span className="h-[5px] w-16 overflow-hidden rounded-full bg-[var(--peat-sunken)]">
+      <span className="u-num w-8 text-right text-[12px] text-fg">{value}</span>
+      <span className="h-[5px] w-16 overflow-hidden rounded-full bg-[var(--well)]">
         <span className="block h-full rounded-full" style={{ width: `${pct}%`, background: tone }} />
       </span>
     </span>
@@ -200,8 +208,8 @@ export function EmptyState({ title, body, action }: { title: string; body: strin
         <rect x="0" y="17" width="30" height="4" rx="1.5" fill="var(--rule)" opacity="0.6" />
       </svg>
       <div>
-        <p className="text-[15px] font-medium text-bone">{title}</p>
-        <p className="mt-1.5 max-w-[58ch] text-[13px] text-lichen">{body}</p>
+        <p className="text-[15px] font-medium text-fg">{title}</p>
+        <p className="mt-1.5 max-w-[58ch] text-[13px] text-fg-subtle">{body}</p>
       </div>
       {action}
     </div>
@@ -215,7 +223,7 @@ export function Skeleton({ className = "", style }: { className?: string; style?
 export function TableSkeleton({ rows = 6, cols = 4 }: { rows?: number; cols?: number }) {
   return (
     <div className="panel overflow-hidden" role="status" aria-label="Loading">
-      <div className="flex gap-4 border-b border-rule bg-[var(--peat-raised)] px-4 py-3">
+      <div className="flex gap-4 border-b border-rule bg-[var(--surface)] px-4 py-3">
         {Array.from({ length: cols }, (_, i) => (
           <Skeleton key={i} className="h-2.5 flex-1" />
         ))}
