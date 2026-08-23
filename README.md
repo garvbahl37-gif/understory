@@ -7,7 +7,7 @@
 An open-source supply chain risk console backed by a graph database.
 Built for the Wexa AI take-home, on [CognoDB](https://console.cognodb.com) over Bolt + openCypher.
 
-[Live demo](#) · [Screen recording](#) · [Why a graph database?](#why-a-graph-database) · [Data model](#data-model) · [The queries](#the-queries-that-matter)
+**[▶ Live demo](https://understory-garvbahl37-gifs-projects.vercel.app)** · [Why a graph database?](#why-a-graph-database) · [Data model](#data-model) · [The queries](#the-queries-that-matter) · [What CognoDB does differently](#what-cognodb-does-differently)
 
 </div>
 
@@ -43,9 +43,16 @@ In Cypher it is the query, and the path comes back for free:
 ```cypher
 MATCH (a:Advisory {id: $advisoryId})-[:AFFECTS]->(vulnerable:Version)
 MATCH (s:Service)-[u:USES]->(entry:Version)
-MATCH route = shortestPath((entry)-[:DEPENDS_ON*0..6]->(vulnerable))
-RETURN s.name, [n IN nodes(route) | n.key] AS chain
+OPTIONAL MATCH route = shortestPath((entry)-[:DEPENDS_ON*1..6]->(vulnerable))
+WITH s, entry, vulnerable, route,
+     CASE WHEN entry = vulnerable THEN 0 ELSE length(route) END AS hops
+WHERE hops IS NOT NULL AND hops <= $maxDepth
+RETURN s.name, hops,
+       CASE WHEN route IS NULL THEN [vulnerable.key] ELSE [n IN nodes(route) | n.key] END AS chain
 ```
+
+> The zero-hop case is spelled out rather than folded into `*0..6` for a reason —
+> see [what CognoDB does differently](#what-cognodb-does-differently).
 
 ### 2. Depth is the finding
 
@@ -60,9 +67,20 @@ MATCH (l:License)<-[:LICENSED_UNDER]-(obligated:Version)
 WHERE l.category IN $categories
 MATCH (s:Service)-[:USES]->(entry:Version)
 WHERE s.shipsExternally = true
-MATCH route = shortestPath((entry)-[:DEPENDS_ON*0..6]->(obligated))
+OPTIONAL MATCH route = shortestPath((entry)-[:DEPENDS_ON*1..6]->(obligated))
+WITH s, l, entry, obligated, route,
+     CASE WHEN entry = obligated THEN 0 ELSE length(route) END AS hops
+WHERE hops IS NOT NULL AND hops <= $maxDepth
 OPTIONAL MATCH (t:Team)-[:OWNS]->(s)
-RETURN s.name, t.name, l.spdxId, [n IN nodes(route) | n.key] AS chain
+RETURN s.name, t.name, l.spdxId, hops, ...
+```
+
+Live output for `api-gateway`:
+
+```
+0 │ API Gateway                          service
+1 │ └─ golang.org/x/crypto@0.31.1        declared
+2 │    └─ golang.org/x/sys@0.21.0        GPL-3.0-only
 ```
 
 Relationally: a recursive CTE, joined to licences, joined to services, joined to teams, plus a hand-written path accumulator and cycle guard.
@@ -114,18 +132,20 @@ graph LR
 
 ### Live census
 
-| Label        |     Count |     | Relationship                                         |     Count |
-| ------------ | --------: | --- | ---------------------------------------------------- | --------: |
-| `Version`    |     1,331 |     | `DEPENDS_ON`                                         |     1,563 |
-| `Package`    |       359 |     | `HAS_VERSION`                                        |     1,331 |
-| `Maintainer` |       190 |     | `PUBLISHED`                                          |     1,331 |
-| `Advisory`   |        67 |     | `LICENSED_UNDER`                                     |     1,331 |
-| `Service`    |        44 |     | `SUPERSEDES`                                         |       972 |
-| `License`    |        17 |     | `MAINTAINS`                                          |       756 |
-| `Team`       |        10 |     | `USES` · `CALLS` · `OWNS` · `AFFECTS` · `SIMILAR_TO` |       507 |
-| **Total**    | **2,018** |     | **Total**                                            | **7,791** |
+Read from the instance while writing this. The `/model` page renders the same counts on every load.
 
-Comfortably inside the free (c0) tier's 1 GB disk and 256 MB RAM. The `/model` page renders these counts live from the database.
+| Label        |     Count |     | Relationship                                                          |     Count |
+| ------------ | --------: | --- | --------------------------------------------------------------------- | --------: |
+| `Version`    |     1,354 |     | `DEPENDS_ON`                                                          |     1,739 |
+| `Package`    |       359 |     | `HAS_VERSION`                                                         |     1,354 |
+| `Maintainer` |       190 |     | `LICENSED_UNDER`                                                      |     1,354 |
+| `Advisory`   |        67 |     | `PUBLISHED`                                                           |     1,354 |
+| `Service`    |        44 |     | `SUPERSEDES`                                                          |       995 |
+| `License`    |        17 |     | `MAINTAINS`                                                           |       721 |
+| `Team`       |        10 |     | `USES` 211 · `AFFECTS` 167 · `CALLS` 78 · `OWNS` 44 · `SIMILAR_TO` 19 |       519 |
+| **Total**    | **2,041** |     | **Total**                                                             | **8,036** |
+
+Comfortably inside the free (c0) tier's 1 GB disk and 256 MB RAM.
 
 ---
 
@@ -158,6 +178,67 @@ WHERE (size($severities) = 0 OR a.severity IN $severities)
 One statement serves every combination of filters, so the query plan is reusable and there is no code path anywhere that builds Cypher from user input.
 
 Each catalogue entry carries a Zod schema for its parameters, and [`runQuery`](src/lib/queries/run.ts) is the single choke point that validates them and normalises Bolt's wire types on the way back.
+
+---
+
+## What CognoDB does differently
+
+CognoDB reports itself as `Neo4j/5.26.0` over Bolt 5.4, and the official driver connects with no adaptation at all — pointing `neo4j-driver` at the `bolt+s://` URI was the entire integration. But two openCypher behaviours differ from Neo4j in ways that fail _silently_, and both were caught by `npm run verify` rather than by reading the docs. They are worth writing down.
+
+### 1. `shortestPath` does not return the zero-length path
+
+```cypher
+MATCH (a)-[:AFFECTS]->(v:Version)
+MATCH (s:Service)-[:USES]->(entry:Version)
+MATCH route = shortestPath((entry)-[:DEPENDS_ON*0..6]->(v))   -- entry may BE v
+```
+
+When `entry` and `v` resolve to the same node, Neo4j yields a zero-length path. CognoDB yields nothing. A plain `MATCH (entry)-[:DEPENDS_ON*0..6]->(v)` _does_ match it, so the two disagree.
+
+The consequence was not a crash — it was **every direct dependency silently vanishing from the answer**, which is the single most important case. Log4Shell reported a blast radius of zero services while `auth-capture-worker` sat there with `log4j-core@2.14.0` in its manifest.
+
+**Fix:** handle hop zero explicitly and start `shortestPath` at one hop.
+
+```cypher
+OPTIONAL MATCH route = shortestPath((entry)-[:DEPENDS_ON*1..6]->(v))
+WITH entry, v, route,
+     CASE WHEN entry = v THEN 0 ELSE length(route) END AS hops
+WHERE hops IS NOT NULL
+```
+
+This is also **2.4× faster** than the plain `*0..6` expansion on the widest advisory in the dataset — 0.9s against 2.3s — because bidirectional BFS beats enumerating every path.
+
+### 2. Pattern predicates do not bind an already-bound endpoint
+
+```cypher
+MATCH (a:Advisory {id: $id})-[:AFFECTS]->(current:Version {key: $key})
+MATCH (pkg)-[:HAS_VERSION]->(target:Version)
+WHERE NOT (a)-[:AFFECTS]->(target)      -- looks obvious; is not
+```
+
+On CognoDB the predicate `(a)-[:AFFECTS]->(target)` ignores the bound `target` and asks "does `a` have _any_ `AFFECTS` edge?". Measured directly: the positive form matched all five releases of `log4j-core` instead of the two that are actually affected, and the negated form matched none. `EXISTS { … }` behaves the same way.
+
+This bit twice, and the second one is the dangerous kind:
+
+- **`advisory.upgradePath`** returned no rows at all — visibly broken, quickly found.
+- **`risk.inheritedExposure`** used `NOT (caller)-[:USES]->()-[:DEPENDS_ON*0..3]->(v)` to mean "the caller is clean itself". That predicate evaluated to `true` for every row, so the filter did nothing and the query kept returning plausible-looking answers that were quietly wrong.
+
+**Fix:** materialise the set and test membership. It is portable, and it reads better anyway.
+
+```cypher
+MATCH (a:Advisory {id: $id})-[:AFFECTS]->(affected:Version)
+WITH a, collect(affected.key) AS affectedKeys
+...
+WHERE NOT target.key IN affectedKeys
+```
+
+### 3. Variable-length bounds must be literals
+
+openCypher does not allow `[:R*1..$n]`. Rather than building the statement as a string — which would break the no-concatenation rule for the sake of one integer — the pattern uses a generous literal bound and applies the caller's depth as `WHERE length(route) <= $maxDepth`. One frozen statement, a real parameter, no string building.
+
+### The general lesson
+
+Every one of these produced _plausible_ output. None threw. The only reason they were caught is that `npm run verify` runs all 43 catalogued statements against the real instance and prints row counts, so "this returns 0 rows and it shouldn't" is visible at a glance. That script paid for itself several times over, and it is the first thing I would keep if I had to throw the rest away.
 
 ---
 
@@ -302,15 +383,17 @@ src/
 
 ## Design
 
-The palette is a **soil profile**, because that is what the data is: your service at the surface, the package that is on fire five strata below it.
+**Depth is the organising idea**, because depth is the question the product answers. It gets its own single-hue sequential ramp and nothing else is allowed to use it.
 
-- **Ground** is warm peat rather than the usual blue-black, with a fine grain overlay so it reads as material rather than plastic.
-- **Depth** is encoded as an ochre ramp. Every dependency path in the application is drawn as an indented monospace tree with a soil-profile gutter — the notation engineers already read in `npm ls`, made legible at a glance to someone who has never seen a lockfile.
-- **Chalk blue** is the only cool colour in the system and is reserved for things you can act on.
-- **Severity** is a separate, reserved status channel. The four steps were tuned with a colour-vision validator, not by eye: the worst adjacent pair separates by ΔE 12.8 under deuteranopia and 16.4 under normal vision, severity is _additionally_ encoded by lightness, and every severity mark ships with its label — colour alone never carries the meaning.
+- **Ground** is cool graphite in three steps, with a fine grain and a barely-there overhead gradient so it reads as material rather than as a flat fill.
+- **Every dependency path** is drawn as an indented monospace tree with a depth gutter — the notation engineers already read in `npm ls`, made legible at a glance to someone who has never opened a lockfile. The graph explorer uses the same ramp to colour nodes by hops from wherever you started, which turns a hairball into a picture with a readable gradient.
+- **Indigo** is the one interactive family: links, selection, primary actions.
+- **Severity** is a reserved status channel that never means anything else. The four steps were tuned with a colour-vision validator rather than by eye — the worst adjacent pair separates by ΔE 15.4 under normal vision and 10.9 under deuteranopia, severity is _additionally_ encoded by lightness, and every severity mark ships with its label, so colour alone never carries meaning.
 - **Type** is Fraunces for the name and section titles, IBM Plex Sans for the interface, IBM Plex Mono for every identifier, version and number.
 
-Every text colour in the system clears 4.5:1 against all three surfaces; the deep strata colours are used only for 3px bands that carry no text. Loading, empty and error states are designed rather than defaulted, filters live in the URL so every view is shareable, focus is always visible, and `prefers-reduced-motion` is respected — including by the force layout, which runs to completion in one tick rather than animating.
+Checked rather than assumed: the depth ramp is strictly monotonic in lightness, and every text token clears 4.5:1 against all three surfaces (the darkest depth steps are used only for 3px bands that carry no text).
+
+Loading, empty and error states are designed rather than defaulted — skeletons match the shape of what they replace, and "nothing we run can reach this" is written as an answer, not an absence. Filters live in the URL so every view is shareable, overlays are portalled out of the masthead so `backdrop-filter` cannot capture them, focus is always visible, and `prefers-reduced-motion` is respected — including by the force layout, which runs to completion in one tick instead of animating.
 
 ---
 
@@ -337,6 +420,17 @@ CVSS scores for the real advisories are the commonly cited v3.1 base scores; tre
 Next.js 16 (App Router, React 19) · TypeScript strict · Tailwind CSS v4 · **`neo4j-driver` 6** over Bolt to CognoDB · Zod · d3-force · deployed on Vercel.
 
 The official Neo4j driver is used unchanged — CognoDB speaks Bolt 5.x and openCypher, so pointing the driver at a `bolt+s://` URI was the entire integration.
+
+---
+
+## Deliverables
+
+| | |
+|---|---|
+| **Source** | This repository |
+| **Hosted demo** | https://understory-garvbahl37-gifs-projects.vercel.app — public, no login, pointed at a live free-tier CognoDB instance |
+| **Live database** | `bolt+s://db-19348fec.bravo.databases.cognodb.com`, kept running |
+| **Screen recording** | _to be added_ |
 
 ---
 
