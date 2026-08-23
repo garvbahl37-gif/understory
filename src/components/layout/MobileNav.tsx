@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 
+import { Portal, useScrollLock } from "@/components/ui/Portal";
+
 const LINKS = [
   { href: "/", label: "Overview" },
   { href: "/advisories", label: "Advisories" },
@@ -21,6 +23,8 @@ export function MobileNav() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
+  useScrollLock(open);
+
   // Close on navigation. React's documented way to react to a changed value is
   // to adjust state during render rather than to fire an effect, which avoids a
   // second render pass and a frame of the drawer still being open.
@@ -36,7 +40,7 @@ export function MobileNav() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Open navigation"
-        className="rounded border border-rule px-2 py-1.5 text-lichen transition-colors hover:border-rule-strong hover:text-bone"
+        className="rounded border border-rule px-2 py-1.5 text-fg-subtle transition-colors hover:border-rule-strong hover:text-fg"
       >
         <svg width="14" height="12" viewBox="0 0 14 12" aria-hidden>
           <rect y="0" width="14" height="1.6" rx="0.8" fill="currentColor" />
@@ -46,32 +50,38 @@ export function MobileNav() {
       </button>
 
       {open ? (
-        <div className="fixed inset-0 z-50 bg-black/55" onClick={() => setOpen(false)} role="presentation">
-          <nav
-            aria-label="Sections"
-            className="h-full w-[268px] overflow-y-auto border-r border-rule bg-[var(--peat-sunken)] px-3 py-5"
-            onClick={(event) => event.stopPropagation()}
+        <Portal>
+          <div
+            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm"
+            onClick={() => setOpen(false)}
+            role="presentation"
           >
-            <p className="u-eyebrow px-3 pb-3">Understory</p>
-            <ul className="space-y-px">
-              {LINKS.map((link) => {
-                const active = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
-                return (
-                  <li key={link.href}>
-                    <Link
-                      href={link.href}
-                      className={`block rounded px-3 py-2 text-[13.5px] ${
-                        active ? "bg-[var(--peat-high)] text-bone" : "text-lichen"
-                      }`}
-                    >
-                      {link.label}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
-        </div>
+            <nav
+              aria-label="Sections"
+              className="h-full w-[268px] overflow-y-auto border-r border-rule bg-[var(--well)] px-3 py-5"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <p className="u-eyebrow px-3 pb-3">Understory</p>
+              <ul className="space-y-px">
+                {LINKS.map((link) => {
+                  const active = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
+                  return (
+                    <li key={link.href}>
+                      <Link
+                        href={link.href}
+                        className={`block rounded px-3 py-2 text-[13.5px] ${
+                          active ? "bg-[var(--surface-2)] text-fg" : "text-fg-subtle"
+                        }`}
+                      >
+                        {link.label}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
+          </div>
+        </Portal>
       ) : null}
     </div>
   );
