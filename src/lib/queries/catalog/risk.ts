@@ -140,6 +140,13 @@ LIMIT $limit
  * Path one runs over the service call graph; path two runs over the dependency
  * graph. The interesting result is where they meet: a critical service that is
  * clean itself but talks to something that is not.
+ *
+ * "Clean itself" is expressed by materialising the caller's own closure as a
+ * list and testing membership, rather than with a negated pattern predicate.
+ * CognoDB does not bind an already-bound endpoint inside a pattern predicate,
+ * so the natural-looking `NOT (caller)-[:USES]->()-[:DEPENDS_ON*0..3]->(v)`
+ * evaluates to true for every row and the filter silently does nothing — the
+ * worst kind of bug, because the query keeps returning plausible answers.
  */
 export const inheritedExposure = defineQuery({
   id: "risk.inheritedExposure",
@@ -149,11 +156,13 @@ export const inheritedExposure = defineQuery({
   cypher: `
 MATCH (caller:Service)
 WHERE caller.tier = 'critical'
+MATCH (caller)-[:USES]->(:Version)-[:DEPENDS_ON*0..3]->(own:Version)
+WITH caller, collect(DISTINCT own.key) AS ownClosure
 MATCH callRoute = (caller)-[:CALLS*1..3]->(callee:Service)
 WHERE callee <> caller
 MATCH (callee)-[:USES]->(:Version)-[:DEPENDS_ON*0..3]->(v:Version)<-[:AFFECTS]-(a:Advisory)
 WHERE a.severity IN $severities
-  AND NOT (caller)-[:USES]->(:Version)-[:DEPENDS_ON*0..3]->(v)
+  AND NOT v.key IN ownClosure
 MATCH (p:Package)-[:HAS_VERSION]->(v)
 WITH caller, callee, a, p, callRoute, length(callRoute) AS callHops
 ORDER BY callHops ASC

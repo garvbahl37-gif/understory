@@ -125,11 +125,15 @@ export const packageDownstreamServices = defineQuery({
   cypher: `
 MATCH (p:Package {key: $packageKey})-[:HAS_VERSION]->(v:Version)
 MATCH (s:Service)-[:USES]->(entry:Version)
-MATCH route = shortestPath((entry)-[:DEPENDS_ON*0..6]->(v))
+OPTIONAL MATCH route = shortestPath((entry)-[:DEPENDS_ON*1..6]->(v))
+WITH s, entry, v, route,
+     CASE WHEN entry = v THEN 0 ELSE length(route) END AS hops
+WHERE hops IS NOT NULL
 OPTIONAL MATCH (t:Team)-[:OWNS]->(s)
-WITH s, t, v, route, length(route) AS hops
+WITH s, t, v, hops,
+     CASE WHEN route IS NULL THEN [v.key] ELSE [n IN nodes(route) | n.key] END AS chain
 ORDER BY hops ASC
-WITH s, t, collect({hops: hops, version: v.key, chain: [n IN nodes(route) | n.key]}) AS routes
+WITH s, t, collect({hops: hops, version: v.key, chain: chain}) AS routes
 RETURN s.slug AS serviceSlug,
        s.name AS serviceName,
        s.tier AS tier,

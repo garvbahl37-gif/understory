@@ -27,13 +27,16 @@ MATCH (l:License)<-[:LICENSED_UNDER]-(obligated:Version)
 WHERE l.category IN $categories
 MATCH (s:Service)-[:USES]->(entry:Version)
 WHERE s.shipsExternally = true
-MATCH route = shortestPath((entry)-[:DEPENDS_ON*0..6]->(obligated))
-WHERE length(route) <= $maxDepth
+OPTIONAL MATCH route = shortestPath((entry)-[:DEPENDS_ON*1..6]->(obligated))
+WITH s, l, entry, obligated, route,
+     CASE WHEN entry = obligated THEN 0 ELSE length(route) END AS hops
+WHERE hops IS NOT NULL AND hops <= $maxDepth
 OPTIONAL MATCH (t:Team)-[:OWNS]->(s)
-WITH s, t, l, obligated, route, length(route) AS hops
+WITH s, t, l, obligated, hops,
+     CASE WHEN route IS NULL THEN [obligated.key] ELSE [n IN nodes(route) | n.key] END AS chain
 ORDER BY hops ASC
 WITH s, t, l,
-     collect({version: obligated.key, hops: hops, chain: [n IN nodes(route) | n.key]}) AS routes,
+     collect({version: obligated.key, hops: hops, chain: chain}) AS routes,
      count(DISTINCT obligated) AS distinctVersions
 RETURN s.slug AS serviceSlug,
        s.name AS serviceName,

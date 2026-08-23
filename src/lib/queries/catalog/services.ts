@@ -136,15 +136,19 @@ export const serviceAdvisories = defineQuery({
   cypher: `
 MATCH (s:Service {slug: $slug})-[u:USES]->(entry:Version)
 MATCH (a:Advisory)-[:AFFECTS]->(vulnerable:Version)
-MATCH route = shortestPath((entry)-[:DEPENDS_ON*0..6]->(vulnerable))
-WITH a, u, entry, vulnerable, route, length(route) AS hops
+OPTIONAL MATCH route = shortestPath((entry)-[:DEPENDS_ON*1..6]->(vulnerable))
+WITH a, u, entry, vulnerable, route,
+     CASE WHEN entry = vulnerable THEN 0 ELSE length(route) END AS hops
+WHERE hops IS NOT NULL
+WITH a, u, entry, vulnerable, hops,
+     CASE WHEN route IS NULL THEN [vulnerable.key] ELSE [n IN nodes(route) | n.key] END AS chain
 ORDER BY hops ASC
 WITH a, collect({
        hops: hops,
        scope: u.scope,
        entryPackage: entry.key,
        vulnerableVersion: vulnerable.key,
-       chain: [n IN nodes(route) | n.key]
+       chain: chain
      }) AS routes
 RETURN a.id AS advisoryId,
        a.title AS title,

@@ -9,7 +9,9 @@
  * timings, which is how the traversal depths in the catalogue were tuned for a
  * 0.5 vCPU instance.
  */
-import "dotenv/config";
+import { loadEnv } from "@/lib/load-env";
+
+loadEnv();
 
 import { closeDriver, readQuery } from "@/lib/db/driver";
 import { describeTarget, readDbConfig, resetDbConfigCache } from "@/lib/db/config";

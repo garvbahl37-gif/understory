@@ -10,7 +10,9 @@
  * statement, and we report progress as we go because a slow network makes a
  * silent loader feel broken.
  */
-import "dotenv/config";
+import { loadEnv } from "@/lib/load-env";
+
+loadEnv();
 
 import { closeDriver, readQuery, writeQuery } from "@/lib/db/driver";
 import { describeTarget, readDbConfig, resetDbConfigCache } from "@/lib/db/config";
