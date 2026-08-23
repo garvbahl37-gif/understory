@@ -7,7 +7,7 @@
 An open-source supply chain risk console backed by a graph database.
 Built for the Wexa AI take-home, on [CognoDB](https://console.cognodb.com) over Bolt + openCypher.
 
-**[▶ Live demo](https://understory-garvbahl37-gifs-projects.vercel.app)** · [Why a graph database?](#why-a-graph-database) · [Data model](#data-model) · [The queries](#the-queries-that-matter) · [What CognoDB does differently](#what-cognodb-does-differently)
+**[▶ Live demo](https://understory-graph.vercel.app)** · [Why a graph database?](#why-a-graph-database) · [Data model](#data-model) · [The queries](#the-queries-that-matter) · [What CognoDB does differently](#what-cognodb-does-differently)
 
 </div>
 
@@ -244,11 +244,53 @@ Every one of these produced _plausible_ output. None threw. The only reason they
 
 ## Screenshots
 
-|                                                                                                                                                         |                                                                                                                                                  |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| ![Overview](docs/screenshots/overview.png) **Overview** — leads with the deepest live exposure, rendered as a soil-profile chain                        | ![Blast radius](docs/screenshots/blast-radius.png) **Blast radius** — every affected service, its chain, its owner, and the nearest safe upgrade |
-| ![Explorer](docs/screenshots/explorer.png) **Explorer** — the subgraph as stored, assembled from several small edge-list queries                        | ![Risk](docs/screenshots/risk.png) **Structural risk** — chokepoints, maintainer blast radius, typosquat adjacency, inherited exposure           |
-| ![Licences](docs/screenshots/licences.png) **Licences** — copyleft obligations that reached a customer-facing service, with the chain that carried them | ![Queries](docs/screenshots/queries.png) **Query catalogue** — every statement, its reasoning, and a button to run it live                       |
+Captured from the deployed build at **[understory-graph.vercel.app](https://understory-graph.vercel.app)**, reading from the live CognoDB instance.
+
+#### Overview — leads with the deepest live exposure, not a row of counters
+
+The interesting fact is never _how many_ advisories there are. It is that a tier-1 service sits four hops above one and nobody on the owning team ever typed that package's name.
+
+![Overview](docs/screenshots/overview.png)
+
+#### Blast radius — every affected service, its chain, and the nearest clean release
+
+The remediation panel finds `1.2.6` by walking the `SUPERSEDES` chain until it reaches a release the advisory does not touch — not by reading the fix note.
+
+![Blast radius](docs/screenshots/blast-radius.png)
+
+#### Service detail — what one service is really standing on
+
+Real npm chains, four levels deep: `Checkout API → express → qs → side-channel → get-intrinsic`. The licence mix is computed over the whole closure, not the manifest.
+
+![Service detail](docs/screenshots/service.png)
+
+#### Explorer — nodes coloured by distance from wherever you started
+
+Hovering traces the route back to the centre and dims everything off it. Same depth ramp as the chains, so the picture and the tables agree.
+
+![Explorer](docs/screenshots/explorer.png)
+
+#### Structural risk — the problems that are true before anything is disclosed
+
+Single-maintainer chokepoints ranked by how much of the estate sits beneath them, weighted by tier-1 reach and by whether anyone on the roster has two-factor enabled.
+
+![Structural risk](docs/screenshots/risk.png)
+
+#### Licences — copyleft obligations that reached a customer-facing service
+
+Three unrelated parts of the graph joined by a variable-depth traversal, returning the chain that carried the obligation rather than just the fact of it.
+
+![Licences](docs/screenshots/licences.png)
+
+#### Query catalogue — every statement, with its reasoning, runnable live
+
+The page renders from the same frozen registry the application executes, so the documentation cannot drift from the code. Edit the parameters and run any of them against the database.
+
+![Query catalogue](docs/screenshots/queries.png)
+
+#### Data model — counts read live, provenance stated plainly
+
+![Data model](docs/screenshots/model.png)
 
 ---
 
@@ -425,12 +467,12 @@ The official Neo4j driver is used unchanged — CognoDB speaks Bolt 5.x and open
 
 ## Deliverables
 
-| | |
-|---|---|
-| **Source** | This repository |
-| **Hosted demo** | https://understory-garvbahl37-gifs-projects.vercel.app — public, no login, pointed at a live free-tier CognoDB instance |
-| **Live database** | `bolt+s://db-19348fec.bravo.databases.cognodb.com`, kept running |
-| **Screen recording** | _to be added_ |
+|                      |                                                                                                      |
+| -------------------- | ---------------------------------------------------------------------------------------------------- |
+| **Source**           | This repository                                                                                      |
+| **Hosted demo**      | https://understory-graph.vercel.app — public, no login, pointed at a live free-tier CognoDB instance |
+| **Live database**    | `bolt+s://db-19348fec.bravo.databases.cognodb.com`, kept running                                     |
+| **Screen recording** | _to be added_                                                                                        |
 
 ---
 

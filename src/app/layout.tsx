@@ -40,6 +40,7 @@ export const metadata: Metadata = {
   description:
     "See what your software is standing on. Understory maps services, packages, releases, maintainers, licences and advisories as one graph, so you can answer 'who is affected by this CVE, and through which chain of dependencies?' in a single query.",
   applicationName: "Understory",
+  metadataBase: new URL("https://understory-graph.vercel.app"),
   authors: [{ name: "garvbahl37" }],
   openGraph: {
     title: "Understory — open-source supply chain graph",
