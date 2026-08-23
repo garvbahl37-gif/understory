@@ -24,7 +24,7 @@ export default function GlobalError({
           </span>
         </div>
         <div className="px-5 py-5">
-          <p className="text-[15px] text-bone">This page failed to render.</p>
+          <p className="text-[15px] text-fg">This page failed to render.</p>
           <p className="u-lede mt-2.5 text-[13px]">
             This is a bug rather than a database problem — the data layer reports its own failures with a
             specific message. Retrying is worth one attempt; if it persists, the connection page will tell you
@@ -42,7 +42,7 @@ export default function GlobalError({
             </Link>
           </div>
           {error.digest ? (
-            <p className="u-mono mt-5 border-t border-rule pt-4 text-[11px] text-lichen-faint">
+            <p className="u-mono mt-5 border-t border-rule pt-4 text-[11px] text-fg-ghost">
               digest {error.digest}
             </p>
           ) : null}

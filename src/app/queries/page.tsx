@@ -25,42 +25,41 @@ export default function QueriesPage() {
       <div className="mb-8 grid gap-3 sm:grid-cols-3">
         <Panel>
           <p className="u-eyebrow">Statements in the catalogue</p>
-          <p className="u-num mt-2 text-[27px] text-bone">{QUERY_LIST.length}</p>
-          <p className="mt-2 text-[12px] text-lichen">Nothing else in the codebase writes Cypher.</p>
+          <p className="u-num mt-2 text-[27px] text-fg">{QUERY_LIST.length}</p>
+          <p className="mt-2 text-[12px] text-fg-subtle">Nothing else in the codebase writes Cypher.</p>
         </Panel>
         <Panel>
           <p className="u-eyebrow">Multi-hop traversals</p>
-          <p className="u-num mt-2 text-[27px] text-bone">{multiHop}</p>
-          <p className="mt-2 text-[12px] text-lichen">Two hops or more, most of them variable-depth.</p>
+          <p className="u-num mt-2 text-[27px] text-fg">{multiHop}</p>
+          <p className="mt-2 text-[12px] text-fg-subtle">Two hops or more, most of them variable-depth.</p>
         </Panel>
         <Panel>
           <p className="u-eyebrow">Shortest-path searches</p>
-          <p className="u-num mt-2 text-[27px] text-bone">{shortestPath}</p>
-          <p className="mt-2 text-[12px] text-lichen">Used where the answer is a route, not a row.</p>
+          <p className="u-num mt-2 text-[27px] text-fg">{shortestPath}</p>
+          <p className="mt-2 text-[12px] text-fg-subtle">Used where the answer is a route, not a row.</p>
         </Panel>
       </div>
 
       <Panel className="mb-8">
         <h2 className="u-eyebrow mb-3">Three things worth noticing</h2>
-        <ul className="space-y-3 text-[13px] leading-relaxed text-bone-dim">
+        <ul className="space-y-3 text-[13px] leading-relaxed text-fg-muted">
           <li>
-            <strong className="text-bone">No string-concatenated Cypher.</strong> Every statement is a frozen
+            <strong className="text-fg">No string-concatenated Cypher.</strong> Every statement is a frozen
             constant. Values reach the database through the driver&apos;s parameter channel, which makes
             injection structurally impossible and lets CognoDB reuse query plans.
           </li>
           <li>
-            <strong className="text-bone">Conditional filters are parameters too.</strong> Patterns like{" "}
-            <code className="u-mono text-[12px] text-chalk">
+            <strong className="text-fg">Conditional filters are parameters too.</strong> Patterns like{" "}
+            <code className="u-mono text-[12px] text-accent">
               size($severities) = 0 OR a.severity IN $severities
             </code>{" "}
             let one statement serve every combination of filters without any of them being spliced into the
             query text.
           </li>
           <li>
-            <strong className="text-bone">This console cannot run arbitrary Cypher.</strong> The API route
-            takes a statement <em>id</em>, not a query, and validates the parameters against that
-            statement&apos;s own schema before the driver sees them. It is a read-only window onto a fixed
-            surface.
+            <strong className="text-fg">This console cannot run arbitrary Cypher.</strong> The API route takes
+            a statement <em>id</em>, not a query, and validates the parameters against that statement&apos;s
+            own schema before the driver sees them. It is a read-only window onto a fixed surface.
           </li>
         </ul>
       </Panel>
@@ -106,9 +105,9 @@ export default function QueriesPage() {
                 {QUERY_LIST.filter((q) => !(FEATURED_QUERY_IDS as readonly string[]).includes(q.id)).map(
                   (q) => (
                     <tr key={q.id}>
-                      <td className="u-mono text-[12px] text-chalk">{q.id}</td>
-                      <td className="max-w-[480px] text-[12.5px] text-lichen">{q.question}</td>
-                      <td className="u-mono text-[10.5px] uppercase tracking-[0.08em] text-lichen-faint">
+                      <td className="u-mono text-[12px] text-accent">{q.id}</td>
+                      <td className="max-w-[480px] text-[12.5px] text-fg-subtle">{q.question}</td>
+                      <td className="u-mono text-[10.5px] uppercase tracking-[0.08em] text-fg-ghost">
                         {q.tags.join(" · ")}
                       </td>
                     </tr>

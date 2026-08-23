@@ -77,18 +77,18 @@ export function QueryRunner({ meta }: { meta: Meta }) {
   const columns = rows && rows.length > 0 ? Object.keys(rows[0]) : [];
 
   const cell = (value: unknown) => {
-    if (value === null || value === undefined) return <span className="text-lichen-faint">null</span>;
+    if (value === null || value === undefined) return <span className="text-fg-ghost">null</span>;
     if (Array.isArray(value)) {
       return (
-        <span className="text-bone-dim">
-          {value.length === 0 ? <span className="text-lichen-faint">[]</span> : value.map(String).join(" › ")}
+        <span className="text-fg-muted">
+          {value.length === 0 ? <span className="text-fg-ghost">[]</span> : value.map(String).join(" › ")}
         </span>
       );
     }
-    if (typeof value === "object") return <span className="text-bone-dim">{JSON.stringify(value)}</span>;
+    if (typeof value === "object") return <span className="text-fg-muted">{JSON.stringify(value)}</span>;
     if (typeof value === "boolean")
-      return <span className={value ? "text-low" : "text-lichen-faint"}>{String(value)}</span>;
-    return <span className="text-bone-dim">{String(value)}</span>;
+      return <span className={value ? "text-low" : "text-fg-ghost"}>{String(value)}</span>;
+    return <span className="text-fg-muted">{String(value)}</span>;
   };
 
   return (
@@ -96,15 +96,15 @@ export function QueryRunner({ meta }: { meta: Meta }) {
       <div className="border-b border-rule px-5 py-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="u-mono text-[10.5px] uppercase tracking-[0.12em] text-chalk">{meta.id}</p>
+            <p className="u-mono text-[10.5px] uppercase tracking-[0.12em] text-accent">{meta.id}</p>
             <h3 className="u-display mt-1.5 text-[19px]">{meta.title}</h3>
-            <p className="mt-1.5 max-w-[70ch] text-[13px] text-bone-dim">{meta.question}</p>
+            <p className="mt-1.5 max-w-[70ch] text-[13px] text-fg-muted">{meta.question}</p>
           </div>
           <div className="flex shrink-0 flex-wrap gap-1.5">
             {meta.tags.map((tag) => (
               <span
                 key={tag}
-                className="u-mono rounded-full border border-rule px-2 py-[2px] text-[9.5px] uppercase tracking-[0.09em] text-lichen"
+                className="u-mono rounded-full border border-rule px-2 py-[2px] text-[9.5px] uppercase tracking-[0.09em] text-fg-subtle"
               >
                 {tag}
               </span>
@@ -112,17 +112,15 @@ export function QueryRunner({ meta }: { meta: Meta }) {
           </div>
         </div>
 
-        <p className="mt-3 max-w-[78ch] border-l-2 border-rule-strong pl-3 text-[12.5px] italic leading-relaxed text-lichen">
+        <p className="mt-3 max-w-[78ch] border-l-2 border-rule-strong pl-3 text-[12.5px] italic leading-relaxed text-fg-subtle">
           {meta.why}
         </p>
 
-        {meta.traversal ? (
-          <p className="u-mono mt-2.5 text-[11px] text-lichen-faint">{meta.traversal}</p>
-        ) : null}
+        {meta.traversal ? <p className="u-mono mt-2.5 text-[11px] text-fg-ghost">{meta.traversal}</p> : null}
       </div>
 
       <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_280px]">
-        <pre className="u-mono overflow-x-auto border-b border-rule px-5 py-4 text-[11.5px] leading-[1.7] text-bone-dim lg:border-b-0 lg:border-r">
+        <pre className="u-mono overflow-x-auto border-b border-rule px-5 py-4 text-[11.5px] leading-[1.7] text-fg-muted lg:border-b-0 lg:border-r">
           {meta.cypher}
         </pre>
 
@@ -147,7 +145,7 @@ export function QueryRunner({ meta }: { meta: Meta }) {
             {running ? "Running…" : "Run against CognoDB"}
           </button>
           {ms !== null ? (
-            <p className="u-mono mt-2 text-[10.5px] text-lichen-faint">
+            <p className="u-mono mt-2 text-[10.5px] text-fg-ghost">
               {rows ? `${rows.length} rows · ` : ""}
               {ms}ms round trip
             </p>
@@ -158,7 +156,7 @@ export function QueryRunner({ meta }: { meta: Meta }) {
       {error ? (
         <div className="border-t border-rule bg-[color-mix(in_srgb,var(--sev-critical)_7%,transparent)] px-5 py-3.5">
           <p className="text-[13px] text-critical">{error.message}</p>
-          {error.detail ? <p className="u-mono mt-1 text-[11px] text-lichen">{error.detail}</p> : null}
+          {error.detail ? <p className="u-mono mt-1 text-[11px] text-fg-subtle">{error.detail}</p> : null}
         </div>
       ) : null}
 
@@ -169,13 +167,13 @@ export function QueryRunner({ meta }: { meta: Meta }) {
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="u-mono text-[10.5px] text-lichen hover:text-bone-dim"
+              className="u-mono text-[10.5px] text-fg-subtle hover:text-fg-muted"
             >
               hide
             </button>
           </div>
           {rows.length === 0 ? (
-            <p className="px-5 pb-4 text-[13px] text-lichen">
+            <p className="px-5 pb-4 text-[13px] text-fg-subtle">
               No rows. That is a real answer, not a failure — nothing in the graph satisfies this pattern.
             </p>
           ) : (
@@ -201,7 +199,7 @@ export function QueryRunner({ meta }: { meta: Meta }) {
                 </tbody>
               </table>
               {rows.length > 60 ? (
-                <p className="px-5 py-2.5 text-[11.5px] text-lichen">
+                <p className="px-5 py-2.5 text-[11.5px] text-fg-subtle">
                   Showing the first 60 of {rows.length} rows.
                 </p>
               ) : null}

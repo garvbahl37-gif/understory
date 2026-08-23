@@ -40,3 +40,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Scratch screenshots from local browser automation
+/*.png
+.playwright-mcp/

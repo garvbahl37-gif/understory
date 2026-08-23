@@ -121,7 +121,7 @@ export default async function ModelPage() {
 
       <Section title="Shape">
         <Panel className="overflow-x-auto">
-          <pre className="u-mono min-w-[640px] text-[11.5px] leading-[1.75] text-bone-dim">
+          <pre className="u-mono min-w-[640px] text-[11.5px] leading-[1.75] text-fg-muted">
             {`                        ┌──────────┐
                         │   Team   │
                         └────┬─────┘
@@ -174,20 +174,18 @@ export default async function ModelPage() {
             return (
               <Panel key={label}>
                 <div className="flex items-baseline justify-between gap-3">
-                  <h3 className="u-mono text-[14px] text-chalk">{label}</h3>
-                  <span className="u-num text-[13px] text-bone">
-                    {plainNumber(labelCount.get(label) ?? 0)}
-                  </span>
+                  <h3 className="u-mono text-[14px] text-accent">{label}</h3>
+                  <span className="u-num text-[13px] text-fg">{plainNumber(labelCount.get(label) ?? 0)}</span>
                 </div>
-                <p className="mt-2 text-[12.5px] leading-relaxed text-bone-dim">{note?.blurb}</p>
+                <p className="mt-2 text-[12.5px] leading-relaxed text-fg-muted">{note?.blurb}</p>
                 <dl className="mt-3 space-y-1.5 border-t border-rule pt-3 text-[11.5px]">
                   <div className="flex gap-3">
-                    <dt className="w-16 shrink-0 text-lichen">key</dt>
-                    <dd className="u-mono text-bone-dim">{note?.keys}</dd>
+                    <dt className="w-16 shrink-0 text-fg-subtle">key</dt>
+                    <dd className="u-mono text-fg-muted">{note?.keys}</dd>
                   </div>
                   <div className="flex gap-3">
-                    <dt className="w-16 shrink-0 text-lichen">props</dt>
-                    <dd className="u-mono break-words text-lichen">{note?.props}</dd>
+                    <dt className="w-16 shrink-0 text-fg-subtle">props</dt>
+                    <dd className="u-mono break-words text-fg-subtle">{note?.props}</dd>
                   </div>
                 </dl>
               </Panel>
@@ -214,13 +212,13 @@ export default async function ModelPage() {
                   const note = REL_NOTES[type];
                   return (
                     <tr key={type}>
-                      <td className="u-mono text-[12px] text-chalk">{type}</td>
-                      <td className="u-mono whitespace-nowrap text-[11.5px] text-bone-dim">
+                      <td className="u-mono text-[12px] text-accent">{type}</td>
+                      <td className="u-mono whitespace-nowrap text-[11.5px] text-fg-muted">
                         {note?.from} → {note?.to}
                       </td>
-                      <td className="max-w-[400px] text-[12.5px] text-lichen">{note?.blurb}</td>
-                      <td className="u-mono text-[11px] text-lichen-faint">{note?.props ?? "—"}</td>
-                      <td className="num text-bone-dim">{plainNumber(typeCount.get(type) ?? 0)}</td>
+                      <td className="max-w-[400px] text-[12.5px] text-fg-subtle">{note?.blurb}</td>
+                      <td className="u-mono text-[11px] text-fg-ghost">{note?.props ?? "—"}</td>
+                      <td className="num text-fg-muted">{plainNumber(typeCount.get(type) ?? 0)}</td>
                     </tr>
                   );
                 })}
@@ -235,7 +233,7 @@ export default async function ModelPage() {
         hint="Created by the loader; a uniqueness constraint is also the index that makes every key lookup a seek."
       >
         <Panel>
-          <pre className="u-mono overflow-x-auto text-[11.5px] leading-[1.8] text-bone-dim">
+          <pre className="u-mono overflow-x-auto text-[11.5px] leading-[1.8] text-fg-muted">
             {`CREATE CONSTRAINT service_slug      FOR (n:Service)    REQUIRE n.slug   IS UNIQUE
 CREATE CONSTRAINT package_key       FOR (n:Package)    REQUIRE n.key    IS UNIQUE
 CREATE CONSTRAINT version_key       FOR (n:Version)    REQUIRE n.key    IS UNIQUE
@@ -256,9 +254,9 @@ CREATE INDEX license_category   FOR (n:License)  ON (n.category)`}
 
       <Section title="Where the data comes from">
         <Panel>
-          <ul className="space-y-3 text-[13px] leading-relaxed text-bone-dim">
+          <ul className="space-y-3 text-[13px] leading-relaxed text-fg-muted">
             <li>
-              <Tag tone="chalk">real</Tag>{" "}
+              <Tag tone="accent">real</Tag>{" "}
               <span className="ml-1">
                 Package names, registries and the dependency edges between them. These are the actual trees —{" "}
                 <code className="u-mono text-[12px]">express</code> really does pull in thirty-one packages,
@@ -270,7 +268,7 @@ CREATE INDEX license_category   FOR (n:License)  ON (n.category)`}
               </span>
             </li>
             <li>
-              <Tag tone="chalk">real</Tag>{" "}
+              <Tag tone="accent">real</Tag>{" "}
               <span className="ml-1">
                 Thirty-seven published advisories, with their true affected packages and fix boundaries.
                 Log4Shell, Text4Shell, Spring4Shell, the lodash prototype-pollution family, the urllib3
@@ -293,7 +291,7 @@ CREATE INDEX license_category   FOR (n:License)  ON (n.category)`}
               </span>
             </li>
           </ul>
-          <p className="mt-4 border-t border-rule pt-4 text-[12.5px] text-lichen">
+          <p className="mt-4 border-t border-rule pt-4 text-[12.5px] text-fg-subtle">
             The whole dataset is a pure function of one seed constant, so two people running the loader get
             identical graphs. See{" "}
             <Link href="/queries" className="link">

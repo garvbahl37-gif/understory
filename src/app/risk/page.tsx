@@ -75,7 +75,7 @@ async function Chokepoints() {
                   </Link>
                   <div className="mt-1 flex items-center gap-2">
                     <Tag tone="quiet">{row.ecosystem}</Tag>
-                    <span className="u-mono text-[10.5px] text-lichen-faint">
+                    <span className="u-mono text-[10.5px] text-fg-ghost">
                       {compactNumber(row.weeklyDownloads)}/wk
                     </span>
                   </div>
@@ -86,7 +86,7 @@ async function Chokepoints() {
                       <Link
                         key={handle}
                         href={`/explorer?seed=maintainer&id=${encodeURIComponent(handle)}`}
-                        className="u-mono text-[11px] text-chalk hover:text-chalk-bright"
+                        className="u-mono text-[11px] text-accent hover:text-accent-bright"
                       >
                         {handle}
                       </Link>
@@ -98,12 +98,12 @@ async function Chokepoints() {
                     </div>
                   ) : null}
                 </td>
-                <td className="num text-bone">{row.dependentServices}</td>
+                <td className="num text-fg">{row.dependentServices}</td>
                 <td className="num">
                   {row.criticalServices > 0 ? (
                     <span className="u-num text-critical">{row.criticalServices}</span>
                   ) : (
-                    <span className="u-num text-lichen-faint">—</span>
+                    <span className="u-num text-fg-ghost">—</span>
                   )}
                 </td>
                 <td className="num">
@@ -159,15 +159,15 @@ async function Maintainers() {
                   >
                     {row.handle}
                   </Link>
-                  <p className="mt-0.5 text-[12px] text-lichen">{row.name}</p>
+                  <p className="mt-0.5 text-[12px] text-fg-subtle">{row.name}</p>
                   <div className="mt-1.5 flex items-center gap-2">
                     {row.twoFactorEnabled ? <Tag tone="quiet">2FA on</Tag> : <Tag tone="warn">no 2FA</Tag>}
-                    <span className="u-mono text-[10.5px] text-lichen-faint">
+                    <span className="u-mono text-[10.5px] text-fg-ghost">
                       joined {relativeDay(row.joinedAt)}
                     </span>
                   </div>
                 </td>
-                <td className="u-mono max-w-[300px] text-[11.5px] text-lichen">
+                <td className="u-mono max-w-[300px] text-[11.5px] text-fg-subtle">
                   {row.topPackages.join(", ")}
                   {row.packages > row.topPackages.length ? ` +${row.packages - row.topPackages.length}` : ""}
                 </td>
@@ -175,10 +175,10 @@ async function Maintainers() {
                   <Meter
                     value={row.dependentServices}
                     max={max}
-                    tone={row.twoFactorEnabled ? "var(--chalk)" : "var(--sev-critical)"}
+                    tone={row.twoFactorEnabled ? "var(--accent)" : "var(--sev-critical)"}
                   />
                 </td>
-                <td className="num text-bone-dim">{row.criticalServices}</td>
+                <td className="num text-fg-muted">{row.criticalServices}</td>
               </tr>
             ))}
           </tbody>
@@ -221,7 +221,7 @@ async function Typosquats() {
                   <span className="u-mono text-[12.5px] text-high">{row.suspectName}</span>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
                     <Tag tone="quiet">{compactNumber(row.suspectDownloads)}/wk</Tag>
-                    <span className="u-mono text-[10.5px] text-lichen-faint">
+                    <span className="u-mono text-[10.5px] text-fg-ghost">
                       published {relativeDay(row.suspectFirstPublished)}
                     </span>
                   </div>
@@ -230,11 +230,11 @@ async function Typosquats() {
                   <Link href={packageHref(row.legitKey)} className="link u-mono text-[12.5px]">
                     {row.legitName}
                   </Link>
-                  <div className="u-mono mt-1 text-[10.5px] text-lichen-faint">
+                  <div className="u-mono mt-1 text-[10.5px] text-fg-ghost">
                     {compactNumber(row.legitDownloads)}/wk
                   </div>
                 </td>
-                <td className="text-[12px] text-lichen">
+                <td className="text-[12px] text-fg-subtle">
                   <Tag tone="quiet">{row.kind}</Tag>
                   <span className="ml-2">
                     {row.editDistance} character{row.editDistance === 1 ? "" : "s"} apart
@@ -243,7 +243,7 @@ async function Typosquats() {
                       : ""}
                   </span>
                 </td>
-                <td className="num text-bone">{row.servicesAtRisk}</td>
+                <td className="num text-fg">{row.servicesAtRisk}</td>
               </tr>
             ))}
           </tbody>
@@ -296,18 +296,18 @@ async function Inherited() {
             </div>
           </div>
           <div className="px-4 py-3">
-            <p className="u-mono text-[12px] text-lichen">
+            <p className="u-mono text-[12px] text-fg-subtle">
               {row.callChain.map((slug, index) => (
                 <span key={slug}>
-                  {index > 0 ? <span className="text-lichen-faint"> → </span> : null}
-                  <span className={index === row.callChain.length - 1 ? "text-critical" : "text-bone-dim"}>
+                  {index > 0 ? <span className="text-fg-ghost"> → </span> : null}
+                  <span className={index === row.callChain.length - 1 ? "text-critical" : "text-fg-muted"}>
                     {slug}
                   </span>
                 </span>
               ))}
             </p>
-            <p className="mt-2 text-[12.5px] text-lichen">
-              <strong className="text-bone-dim">{row.callerName}</strong> is clean itself, but{" "}
+            <p className="mt-2 text-[12.5px] text-fg-subtle">
+              <strong className="text-fg-muted">{row.callerName}</strong> is clean itself, but{" "}
               {row.callHops === 1 ? "calls" : `is ${row.callHops} calls away from`}{" "}
               <Link href={`/services/${row.calleeSlug}`} className="link">
                 {row.calleeName}

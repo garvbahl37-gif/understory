@@ -88,7 +88,7 @@ async function Contamination() {
                 <TierMark tier={first.tier} />
                 <Tag tone="warn">customer-facing</Tag>
               </div>
-              <span className="text-[11.5px] text-lichen">{first.teamName ?? "unowned"}</span>
+              <span className="text-[11.5px] text-fg-subtle">{first.teamName ?? "unowned"}</span>
             </div>
 
             <div className="divide-y divide-[color-mix(in_srgb,var(--rule)_60%,transparent)]">
@@ -97,9 +97,9 @@ async function Contamination() {
                   <div className="mb-2.5 flex flex-wrap items-center gap-2.5">
                     <span className="u-mono text-[13px] text-high">{row.license}</span>
                     <Tag tone={CATEGORY_TONE[row.category] ?? "warn"}>{row.category}</Tag>
-                    <span className="text-[12px] text-lichen">{row.licenseName}</span>
+                    <span className="text-[12px] text-fg-subtle">{row.licenseName}</span>
                     {row.distinctVersions > 1 ? (
-                      <span className="u-mono text-[10.5px] text-lichen-faint">
+                      <span className="u-mono text-[10.5px] text-fg-ghost">
                         {row.distinctVersions} releases under this licence
                       </span>
                     ) : null}
@@ -168,13 +168,13 @@ async function Distribution() {
                   .filter((row) => row.versions > 0)
                   .map((row) => (
                     <tr key={row.spdxId}>
-                      <td className="u-mono text-[12.5px] text-bone">{row.spdxId}</td>
-                      <td className="text-[12.5px] text-lichen">{row.name}</td>
+                      <td className="u-mono text-[12.5px] text-fg">{row.spdxId}</td>
+                      <td className="text-[12.5px] text-fg-subtle">{row.name}</td>
                       <td>
                         <Tag tone={CATEGORY_TONE[row.category] ?? "quiet"}>{row.category}</Tag>
                       </td>
-                      <td className="num text-bone-dim">{plainNumber(row.versions)}</td>
-                      <td className="num text-bone-dim">{plainNumber(row.packages)}</td>
+                      <td className="num text-fg-muted">{plainNumber(row.versions)}</td>
+                      <td className="num text-fg-muted">{plainNumber(row.packages)}</td>
                     </tr>
                   ))}
               </tbody>

@@ -53,7 +53,7 @@ export function Rail() {
   return (
     <nav
       aria-label="Sections"
-      className="sticky top-[57px] hidden h-[calc(100vh-57px)] w-[var(--rail)] shrink-0 flex-col justify-between overflow-y-auto border-r border-rule bg-[var(--peat-sunken)] px-3 py-5 lg:flex"
+      className="sticky top-[57px] hidden h-[calc(100vh-57px)] w-[var(--rail)] shrink-0 flex-col justify-between overflow-y-auto border-r border-rule bg-[var(--well)] px-3 py-5 lg:flex"
     >
       <div className="space-y-6">
         {GROUPS.map((group) => (
@@ -69,17 +69,15 @@ export function Rail() {
                       aria-current={active ? "page" : undefined}
                       className={`group relative block rounded px-3 py-[7px] text-[13px] transition-colors ${
                         active
-                          ? "bg-[var(--peat-high)] text-bone"
-                          : "text-lichen hover:bg-[var(--peat-raised)] hover:text-bone-dim"
+                          ? "bg-[var(--surface-2)] text-fg"
+                          : "text-fg-subtle hover:bg-[var(--surface)] hover:text-fg-muted"
                       }`}
                     >
                       {active ? (
-                        <span className="absolute left-0 top-1/2 h-[15px] w-[2px] -translate-y-1/2 rounded-r bg-chalk" />
+                        <span className="absolute left-0 top-1/2 h-[15px] w-[2px] -translate-y-1/2 rounded-r bg-accent" />
                       ) : null}
                       <span className="block font-medium">{item.label}</span>
-                      <span className="mt-px block text-[11px] leading-snug text-lichen-dim">
-                        {item.hint}
-                      </span>
+                      <span className="mt-px block text-[11px] leading-snug text-fg-faint">{item.hint}</span>
                     </Link>
                   </li>
                 );

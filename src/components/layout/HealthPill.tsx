@@ -50,7 +50,7 @@ export function HealthPill() {
       : health?.status === "degraded"
         ? "var(--sev-medium)"
         : health === null
-          ? "var(--lichen-dim)"
+          ? "var(--fg-faint)"
           : "var(--sev-critical)";
 
   const label =
@@ -65,7 +65,7 @@ export function HealthPill() {
   return (
     <Link
       href="/health"
-      className="block rounded border border-rule bg-[var(--peat-raised)] px-3 py-2.5 transition-colors hover:border-rule-strong"
+      className="block rounded border border-rule bg-[var(--surface)] px-3 py-2.5 transition-colors hover:border-rule-strong"
     >
       <span className="flex items-center gap-2">
         <span
@@ -76,7 +76,7 @@ export function HealthPill() {
           {label}
         </span>
       </span>
-      <span className="u-mono mt-1.5 block text-[10px] leading-tight text-lichen-dim">
+      <span className="u-mono mt-1.5 block text-[10px] leading-tight text-fg-faint">
         CognoDB
         {health?.latencyMs !== undefined ? ` · ${health.latencyMs}ms` : ""}
       </span>
